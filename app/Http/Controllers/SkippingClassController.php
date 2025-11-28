@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Exports\SkippingClassExport;
 use App\Helper;
 use App\Models\Attendance;
-use App\Models\Grade;
-use App\Models\SkippingClass;
+use App\Models\ClassAbsence;
+use App\Models\Classroom;
 use App\Models\Student;
 use App\Models\Subject;
 use Illuminate\Http\Request;
@@ -18,7 +18,7 @@ class SkippingClassController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Contracts\View\View
      */
     public function index()
     {
@@ -36,16 +36,16 @@ class SkippingClassController extends Controller
 
         $data = [
             'title' => 'Siswa Bolos',
-            'skippingClasses' => SkippingClass::whereIn('student_id', $studentsId)->with('subject', 'student')->get(),
+            'skippingClasses' => ClassAbsence::whereIn('student_id', $studentsId)->with('subject', 'student')->get(),
         ];
 
-        return view('skippingClass.index', $data);
+        return view('class-absences.index', $data);
     }
 
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Contracts\View\View
      */
     public function create()
     {
@@ -59,13 +59,13 @@ class SkippingClassController extends Controller
             'subjects' => Subject::latest()->get(),
         ];
 
-        return view('skippingClass.create', $data);
+        return view('class-absences.create', $data);
     }
 
     /**
      * Store a newly created resource in storage.
      *
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function store(Request $request)
     {
@@ -74,7 +74,7 @@ class SkippingClassController extends Controller
             'subject_id' => 'required',
         ]);
 
-        SkippingClass::create($validatedData);
+        ClassAbsence::create($validatedData);
 
         Alert::success('Berhasil', 'Berhasil Menambahkan Data');
 
@@ -85,44 +85,44 @@ class SkippingClassController extends Controller
      * Display the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return void
      */
     public function show($id)
     {
-        //
+        abort(404);
     }
 
     /**
      * Show the form for editing the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return void
      */
     public function edit($id)
     {
-        //
+        abort(404);
     }
 
     /**
      * Update the specified resource in storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return void
      */
     public function update(Request $request, $id)
     {
-        //
+        abort(404);
     }
 
     /**
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function destroy($id)
     {
-        SkippingClass::destroy($id);
+        ClassAbsence::destroy($id);
 
         return redirect('/admin/skippingClass')->with('success', 'Data Berhasil Dihapus');
     }
@@ -133,7 +133,7 @@ class SkippingClassController extends Controller
             return redirect()->back();
         }
 
-        $grade = Grade::where('slug', request('grade'))->first();
+        $grade = Classroom::where('slug', request('grade'))->first();
         $fileName = "Rekap Siswa Bolos Kelas $grade->name | ".request('date').'.xlsx';
 
         return Excel::download(new SkippingClassExport(request('grade'), request('date')), $fileName);

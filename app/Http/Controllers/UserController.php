@@ -2,143 +2,191 @@
 
 namespace App\Http\Controllers;
 
-use App\Helper;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
+use RealRashid\SweetAlert\Facades\Alert;
 
 class UserController extends Controller
 {
     /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
+     * Display a listing of users (admin accounts).
      */
-    public function index()
+    public function index(Request $request)
     {
-        Helper::addHistory('/admin/admins', 'Admin');
+        $query = User::with(['roles'])
+            ->whereHas('roles', function ($q) {
+                $q->where('name', 'admin');
+            });
 
-        $users = User::latest();
+        // Search by name, email, or username
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('username', 'like', "%{$search}%");
+            });
+        }
 
-        // if (request('search')) {
-        //     $users->where('name', 'like', '%' . request('search') . "%")
-        //         ->orWhere('username', 'like', '%' . request('search') . '%');
-        // }
+        $users = $query->latest()->paginate(20);
 
-        $data = [
-            'title' => 'Semua Admin',
-            'users' => $users->get(),
-        ];
-
-        return view('admins.index', $data);
+        return view('users.admins.index', compact('users'));
     }
 
     /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
+     * Show the form for creating a new admin user.
      */
     public function create()
     {
-        Helper::addHistory('/admin/admins/create', 'Tambah Admin');
-
-        $data = [
-            'title' => 'Tambah Admin',
-        ];
-
-        return view('admins.create', $data);
+        return view('users.admins.create');
     }
 
     /**
-     * Store a newly created resource in storage.
-     *
-     * @return \Illuminate\Http\Response
+     * Store a newly created admin user.
      */
     public function store(Request $request)
     {
-        $validatedData = $request->validate([
-            'name' => 'required|max:255',
-            'email' => 'required|email|unique:users',
-            'username' => 'required|max:255|regex:/^\S*$/u|unique:users',
-            'password' => 'required|min:8',
+        $request->validate([
+            'name' => 'required|string|max:100',
+            'email' => 'required|email|unique:users,email',
+            'username' => 'required|string|max:50|unique:users,username',
+            'password' => 'required|string|min:6|confirmed',
+        ], [
+            'name.required' => 'Nama wajib diisi.',
+            'email.required' => 'Email wajib diisi.',
+            'email.email' => 'Format email tidak valid.',
+            'email.unique' => 'Email sudah digunakan.',
+            'username.required' => 'Username wajib diisi.',
+            'username.unique' => 'Username sudah digunakan.',
+            'password.required' => 'Password wajib diisi.',
+            'password.min' => 'Password minimal 6 karakter.',
+            'password.confirmed' => 'Konfirmasi password tidak cocok.',
         ]);
 
-        $validatedData['password'] = Hash::make($request->password);
-        $validatedData['remember_token'] = Str::random(10);
+        try {
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'username' => $request->username,
+                'password' => Hash::make($request->password),
+            ]);
 
-        User::create($validatedData);
+            $user->assignRole('admin');
 
-        return redirect('/admin/admins')->with('success', 'Data Admin Berhasil Ditambahkan');
-    }
+            Alert::success('Berhasil', "Admin {$user->name} berhasil ditambahkan.");
 
-    /**
-     * Display the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function show($id) {}
+            return redirect()->route('dashboard.admins.index');
+        } catch (\Exception $e) {
+            Alert::error('Gagal', 'Terjadi kesalahan: '.$e->getMessage());
 
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function edit($id)
-    {
-        Helper::addHistory('/admin/admins/'.$id.'/edit', 'Ubah Admin');
-
-        $data = [
-            'title' => 'Edit Data Admin',
-            'user' => User::where('id', $id)->first(),
-        ];
-
-        return view('admins.edit', $data);
-    }
-
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function update(Request $request, $id)
-    {
-        $rules = [
-            'name' => 'required|max:255',
-            'username' => 'required|regex:/^\S*$/u|max:255',
-            'email' => 'required|email',
-        ];
-
-        if ($request->oldUsername !== $request->username) {
-            $rules['username'] = 'required|regex:/^\S*$/u|max:255|unique:users';
+            return back()->withInput();
         }
-
-        if ($request->oldEmail !== $request->email) {
-            $rules['email'] = 'required|email|unique:users';
-        }
-
-        $validatedData = $request->validate($rules);
-        $validatedData['password'] = $request->password;
-        $validatedData['remember_token'] = $request->token;
-
-        User::where('id', $id)->update($validatedData);
-
-        return redirect('/admin/admins')->with('success', 'Data Admin Berhasil Diubah');
     }
 
     /**
-     * Remove the specified resource from storage.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * Display the specified user.
      */
-    public function destroy($id)
+    public function show(User $user)
     {
-        User::destroy($id);
+        $user->load(['roles']);
 
-        return redirect('/admin/admins')->with('success', 'User Berhasil Dihapus');
+        return view('users.show', compact('user'));
+    }
+
+    /**
+     * Show the form for editing the specified user.
+     */
+    public function edit(User $user)
+    {
+        $user->load(['roles']);
+
+        return view('users.admins.edit', compact('user'));
+    }
+
+    /**
+     * Update the specified user.
+     */
+    public function update(Request $request, User $user)
+    {
+        $request->validate([
+            'name' => 'required|string|max:100',
+            'email' => 'required|email|unique:users,email,'.$user->id,
+            'username' => 'required|string|max:50|unique:users,username,'.$user->id,
+        ], [
+            'name.required' => 'Nama wajib diisi.',
+            'email.required' => 'Email wajib diisi.',
+            'email.email' => 'Format email tidak valid.',
+            'email.unique' => 'Email sudah digunakan.',
+            'username.required' => 'Username wajib diisi.',
+            'username.unique' => 'Username sudah digunakan.',
+        ]);
+
+        try {
+            $user->update($request->only(['name', 'email', 'username']));
+
+            Alert::success('Berhasil', "Data admin {$user->name} berhasil diperbarui.");
+
+            return redirect()->route('dashboard.admins.index');
+        } catch (\Exception $e) {
+            Alert::error('Gagal', 'Terjadi kesalahan: '.$e->getMessage());
+
+            return back()->withInput();
+        }
+    }
+
+    /**
+     * Remove the specified user.
+     */
+    public function destroy(User $user)
+    {
+        try {
+            // Prevent deleting yourself
+            if ($user->id === auth()->id()) {
+                Alert::warning('Gagal', 'Anda tidak dapat menghapus akun Anda sendiri.');
+
+                return back();
+            }
+
+            // Prevent deleting if only one admin left
+            $adminCount = User::role('admin')->count();
+            if ($adminCount <= 1) {
+                Alert::warning('Gagal', 'Tidak dapat menghapus admin terakhir.');
+
+                return back();
+            }
+
+            $name = $user->name;
+            $user->delete();
+
+            Alert::success('Berhasil', "Admin {$name} berhasil dihapus.");
+
+            return redirect()->route('dashboard.admins.index');
+        } catch (\Exception $e) {
+            Alert::error('Gagal', 'Terjadi kesalahan: '.$e->getMessage());
+
+            return back();
+        }
+    }
+
+    /**
+     * Reset user password.
+     */
+    public function resetPassword(User $user)
+    {
+        try {
+            $newPassword = 'password'; // Default password
+            $user->update([
+                'password' => Hash::make($newPassword),
+            ]);
+
+            Alert::success('Berhasil', "Password {$user->name} berhasil direset ke: {$newPassword}");
+
+            return back();
+        } catch (\Exception $e) {
+            Alert::error('Gagal', 'Terjadi kesalahan: '.$e->getMessage());
+
+            return back();
+        }
     }
 }

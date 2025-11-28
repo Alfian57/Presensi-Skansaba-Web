@@ -1,64 +1,335 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400"></a></p>
+# 📱 Sistem Presensi Siswa SMKN 1 Bantul
 
 <p align="center">
-<a href="https://travis-ci.org/laravel/framework"><img src="https://travis-ci.org/laravel/framework.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
+  <img src="https://img.shields.io/badge/Laravel-9.52-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel">
+  <img src="https://img.shields.io/badge/PHP-8.2-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP">
+  <img src="https://img.shields.io/badge/MySQL-8.0-4479A1?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL">
+  <img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
 </p>
 
-## About Laravel
+<p align="center">
+  Sistem manajemen presensi siswa modern berbasis web dan mobile dengan fitur QR Code, geolokasi, dan foto real-time.
+</p>
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## 📋 Deskripsi
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Sistem Presensi Siswa SMKN 1 Bantul adalah aplikasi manajemen kehadiran siswa yang komprehensif dengan fitur-fitur modern untuk memudahkan administrasi sekolah dalam mengelola presensi harian, jadwal pelajaran, dan data akademik.
 
-## Learning Laravel
+### ✨ Fitur Utama
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+#### 🎯 Presensi & Kehadiran
+- **QR Code Presensi** - Check-in/out otomatis dengan QR Code yang diperbarui setiap hari
+- **Validasi Geolokasi** - Memastikan siswa berada di area sekolah saat presensi
+- **Foto Verifikasi** - Capture foto siswa saat check-in dan check-out
+- **Auto Absent** - Sistem otomatis menandai siswa alpha jika tidak presensi
+- **Multi-Status** - Hadir, Terlambat, Sakit, Izin, Alpha dengan catatan
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains over 2000 video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+#### 👥 Manajemen Data
+- **Data Siswa** - Lengkap dengan NISN, kelas, orang tua, tahun masuk
+- **Data Guru** - NIP, mata pelajaran, wali kelas
+- **Kelas & Jurusan** - Manajemen classroom dengan tingkat dan jurusan
+- **Jadwal Pelajaran** - Jadwal mengajar per hari, mata pelajaran, dan guru
+- **Wali Kelas** - Pengelompokan wali kelas per classroom
 
-## Laravel Sponsors
+#### 📊 Laporan & Analitik
+- **Rekap Presensi** - Per siswa, per kelas, per tanggal
+- **Dashboard** - Statistik kehadiran real-time
+- **Export Excel** - Laporan presensi dalam format XLSX dengan styling
+- **Bolos Pelajaran** - Tracking siswa yang bolos per mata pelajaran
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the Laravel [Patreon page](https://patreon.com/taylorotwell).
+#### 🔐 Keamanan & Akses
+- **Multi-Role** - Admin, Guru, Siswa dengan permissions berbeda
+- **Session Management** - Satu device per siswa (mencegah sharing akun)
+- **API Authentication** - Laravel Sanctum untuk mobile app
+- **Rate Limiting** - Proteksi API dari abuse
 
-### Premium Partners
+#### 🚀 Teknologi Modern
+- **RESTful API v1** - Clean API dengan versioning
+- **Swagger Documentation** - API docs lengkap untuk Android developer
+- **Service Layer** - Business logic terpisah dari controller
+- **Enums & Casting** - Type-safe data dengan PHP 8.2 enums
+- **Queue Workers** - Background jobs untuk performa optimal
+- **Redis Cache** - Caching untuk response lebih cepat
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Cubet Techno Labs](https://cubettech.com)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[Many](https://www.many.co.uk)**
-- **[Webdock, Fast VPS Hosting](https://www.webdock.io/en)**
-- **[DevSquad](https://devsquad.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[OP.GG](https://op.gg)**
-- **[WebReinvent](https://webreinvent.com/?utm_source=laravel&utm_medium=github&utm_campaign=patreon-sponsors)**
-- **[Lendio](https://lendio.com)**
+---
 
-## Contributing
+## 🏗️ Arsitektur Sistem
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Web Dashboard (Admin/Guru)              │
+│                   Laravel Blade + Bootstrap 5                 │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+┌───────────────────────────┴─────────────────────────────────┐
+│                    Mobile App (Android)                      │
+│              REST API (Laravel Sanctum)                      │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+┌───────────────────────────┴─────────────────────────────────┐
+│                   Backend Services Layer                     │
+│  AttendanceService | QRCodeService | StudentService          │
+└───────────────────────────┬─────────────────────────────────┘
+                            │
+┌───────────────────────────┴─────────────────────────────────┐
+│                    Database Layer (MySQL 8.0)                │
+│     Users | Students | Teachers | Attendances | Schedules    │
+└──────────────────────────────────────────────────────────────┘
+```
 
-## Code of Conduct
+---
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## 🛠️ Tech Stack
 
-## Security Vulnerabilities
+### Backend
+- **Framework:** Laravel 9.52.21
+- **PHP:** 8.2+ (with Opcache, Redis extension)
+- **Database:** MySQL 8.0
+- **Cache/Queue:** Redis 7
+- **Authentication:** Laravel Sanctum
+- **Permissions:** Spatie Laravel Permission
+- **API Docs:** L5-Swagger (OpenAPI 3.0)
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### Frontend
+- **Template Engine:** Blade
+- **CSS Framework:** Bootstrap 5
+- **Icons:** Bootstrap Icons
+- **Charts:** Chart.js
+- **Alerts:** SweetAlert2
+- **Build Tool:** Vite
 
-## License
+### DevOps
+- **Containerization:** Docker + Docker Compose
+- **Web Server:** Nginx (Alpine)
+- **Process Manager:** Supervisor
+- **CI/CD:** GitHub Actions
+- **Registry:** GitHub Container Registry
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+---
+
+## 📦 Installation
+
+### Prerequisites
+
+- Docker & Docker Compose (recommended)
+- OR PHP 8.2+, Composer, Node.js 18+, MySQL 8.0, Redis
+
+### Quick Start dengan Docker
+
+```bash
+# Clone repository
+git clone https://github.com/Alfian57/Presensi-Skansaba-Web.git
+cd Presensi-Skansaba-Web
+
+# Copy environment file
+cp .env.example .env
+
+# Update .env dengan konfigurasi Anda
+# Terutama DB_HOST=mysql dan REDIS_HOST=redis
+
+# Start semua services
+docker-compose up -d
+
+# Install dependencies & setup
+docker-compose exec app composer install
+docker-compose exec app php artisan key:generate
+docker-compose exec app php artisan migrate --seed
+docker-compose exec app php artisan storage:link
+docker-compose exec app php artisan l5-swagger:generate
+```
+
+Aplikasi berjalan di:
+- **Web:** http://localhost:8000
+- **API Docs:** http://localhost:8000/api/documentation
+- **phpMyAdmin:** http://localhost:8080
+
+### Manual Installation
+
+```bash
+# Install PHP dependencies
+composer install
+
+# Install Node dependencies
+npm install
+
+# Setup environment
+cp .env.example .env
+php artisan key:generate
+
+# Run migrations
+php artisan migrate --seed
+
+# Build assets
+npm run build
+
+# Generate API documentation
+php artisan l5-swagger:generate
+
+# Link storage
+php artisan storage:link
+
+# Generate IDE helper files (untuk autocomplete)
+php artisan ide-helper:generate
+php artisan ide-helper:models --nowrite
+php artisan ide-helper:meta
+
+# Start development server
+php artisan serve
+```
+
+---
+
+## 📖 API Documentation
+
+API dokumentasi lengkap tersedia dalam format OpenAPI 3.0:
+
+- **Lokal:** http://localhost:8000/api/documentation
+- **Produksi:** https://presensi.smkn1bantul.sch.id/api/documentation
+
+### API Endpoints
+
+```
+Authentication:
+POST   /api/v1/auth/register           # Register siswa
+POST   /api/v1/auth/login              # Login
+POST   /api/v1/auth/logout             # Logout
+GET    /api/v1/auth/profile            # Get profile
+
+Presensi:
+POST   /api/v1/attendances/check-in    # Check-in presensi
+POST   /api/v1/attendances/check-out   # Check-out presensi
+GET    /api/v1/attendances              # List presensi
+GET    /api/v1/attendances/today        # Presensi hari ini
+
+Jadwal:
+GET    /api/v1/schedules                # Jadwal pelajaran
+GET    /api/v1/schedules/today          # Jadwal hari ini
+
+Data Master:
+GET    /api/v1/students                 # List siswa
+GET    /api/v1/teachers                 # List guru
+GET    /api/v1/classrooms               # List kelas
+```
+
+---
+
+## 🚀 Deployment
+
+Lihat [DEPLOYMENT.md](DEPLOYMENT.md) untuk panduan deployment lengkap.
+
+### Quick Deploy dengan Docker
+
+```bash
+# Di production server
+git pull origin main
+docker-compose -f docker-compose.prod.yml up -d --build
+docker-compose exec app php artisan migrate --force
+docker-compose exec app php artisan optimize
+```
+
+### CI/CD Pipeline
+
+Setiap push ke `main` branch akan otomatis:
+1. ✅ Run tests
+2. ✅ Code quality checks
+3. ✅ Build Docker image
+4. ✅ Push ke GitHub Container Registry
+5. ✅ Deploy ke production (jika configured)
+
+---
+
+## 🧪 Testing
+
+```bash
+# Run all tests
+php artisan test
+
+# Run dengan coverage
+php artisan test --coverage
+
+# Run specific test
+php artisan test --filter=AttendanceTest
+
+# Code style check
+./vendor/bin/pint --test
+
+# Static analysis
+./vendor/bin/phpstan analyse
+```
+
+---
+
+## 📝 Default Credentials
+
+Setelah seeding, gunakan credentials berikut:
+
+### Admin
+```
+Email: admin@smkn1bantul.sch.id
+Password: password
+```
+
+### Guru
+```
+Email: guru@smkn1bantul.sch.id
+Password: password
+```
+
+### Siswa
+```
+Email: siswa@smkn1bantul.sch.id
+Password: password
+```
+
+> ⚠️ **Penting:** Ganti semua password default di production!
+
+---
+
+## 🤝 Contributing
+
+Kontribusi sangat diterima! Silakan:
+
+1. Fork repository
+2. Create feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to branch (`git push origin feature/AmazingFeature`)
+5. Open Pull Request
+
+Pastikan kode Anda:
+- ✅ Mengikuti PSR-12 coding standard
+- ✅ Lulus semua tests
+- ✅ Ter-format dengan Laravel Pint
+- ✅ Memiliki dokumentasi yang jelas
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- **SMKN 1 Bantul** - Client dan pengguna sistem
+- **Laravel** - PHP framework yang powerful
+- **Spatie** - Laravel packages yang berkualitas
+- **Community** - Semua kontributor open source
+
+---
+
+## 📞 Support
+
+Untuk pertanyaan, bug reports, atau feature requests:
+
+- **Email:** support@smkn1bantul.sch.id
+- **GitHub Issues:** [Create an issue](https://github.com/Alfian57/Presensi-Skansaba-Web/issues)
+- **Developer:** [@Alfian57](https://github.com/Alfian57)
+
+---
+
+<p align="center">
+  Made with ❤️ by <a href="https://github.com/Alfian57">Alfian</a> for SMKN 1 Bantul
+</p>

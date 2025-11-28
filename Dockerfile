@@ -1,23 +1,22 @@
-# Base image: PHP 8.2 with FPM
-FROM php:8.2-fpm
+# Base image: PHP 8.2 with FPM (Alpine for smaller size)
+FROM php:8.2-fpm-alpine AS base
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apk add --no-cache \
     nginx \
     supervisor \
     curl \
     libpng-dev \
-    libjpeg-dev \
-    libfreetype6-dev \
+    libjpeg-turbo-dev \
+    freetype-dev \
     libxml2-dev \
-    libonig-dev \
+    oniguruma-dev \
     libzip-dev \
-    libicu-dev \
-    zip \
-    unzip \
+    icu-dev \
+    acl \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-configure intl \
-    && docker-php-ext-install \
+    && docker-php-ext-install -j$(nproc) \
        pdo \
        pdo_mysql \
        mbstring \
@@ -27,8 +26,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
        gd \
        opcache \
        intl \
-       zip \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+       zip
+
+# Install Redis extension
+RUN apk add --no-cache $PHPIZE_DEPS \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
+    && apk del $PHPIZE_DEPS
 
 # Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
@@ -36,31 +40,51 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 # Set Working Directory
 WORKDIR /var/www/html
 
-# Copy application dependencies and install
-COPY . .
-RUN composer install --optimize-autoloader --no-dev --no-interaction --prefer-dist
+# Copy composer files first for better caching
+COPY composer.json composer.lock ./
 
-# Install ACL for managing default permissions
-RUN apt-get update && apt-get install -y acl \
-    && setfacl -R -m u:www-data:rwx /var/www/html/storage /var/www/html/bootstrap/cache \
-    && setfacl -dR -m u:www-data:rwx /var/www/html/storage /var/www/html/bootstrap/cache \
-    && chown -R www-data:www-data /var/www/html \
+# Install PHP dependencies
+RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist
+
+# Copy application files
+COPY . .
+
+# Generate optimized autoloader and run post-install scripts
+RUN composer dump-autoload --optimize --no-dev \
+    && php artisan config:cache \
+    && php artisan route:cache \
+    && php artisan view:cache
+
+# Set proper permissions
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 755 /var/www/html \
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Remove default Nginx configuration and add custom config
-RUN rm /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default \
-    && mv /var/www/html/docker/nginx/default.conf /etc/nginx/sites-available/default \
-    && ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/
+# Copy Nginx configuration
+COPY docker/nginx/default.conf /etc/nginx/http.d/default.conf
 
 # Copy Supervisor configuration
 COPY docker/supervisor/supervisord.conf /etc/supervisor/supervisord.conf
+
+# Copy PHP-FPM configuration
+COPY docker/php/php.ini /usr/local/etc/php/conf.d/custom.ini
+COPY docker/php/www.conf /usr/local/etc/php-fpm.d/www.conf
+
+# Create required directories
+RUN mkdir -p /var/www/html/storage/framework/cache \
+    && mkdir -p /var/www/html/storage/framework/sessions \
+    && mkdir -p /var/www/html/storage/framework/views \
+    && mkdir -p /var/www/html/storage/logs
 
 # Expose port 80
 EXPOSE 80
 
 # Healthcheck
-HEALTHCHECK --interval=30s --timeout=5s \
-    CMD curl -f http://localhost/health || exit 1
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost/api/health || exit 1
 
-# Command to run both PHP-FPM and Nginx
-CMD ["supervisord", "-n"]
+# Switch to www-data user
+USER www-data
+
+# Command to run Supervisor
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]

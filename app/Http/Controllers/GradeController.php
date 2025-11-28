@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Helper;
 use App\Http\Requests\StoreGradeRequest;
 use App\Http\Requests\UpdateGradeRequest;
-use App\Models\Grade;
-use App\Models\HomeroomTeacher;
+use App\Models\Classroom;
+use App\Models\Homeroom;
 use App\Models\Schedule;
 use App\Models\Student;
 use Illuminate\Support\Str;
@@ -24,10 +24,10 @@ class GradeController extends Controller
 
         $data = [
             'title' => 'Semua Kelas',
-            'grades' => Grade::latest()->get(),
+            'grades' => Classroom::latest()->get(),
         ];
 
-        return view('grade.index', $data);
+        return view('master-data.classrooms.index', $data);
     }
 
     /**
@@ -43,7 +43,7 @@ class GradeController extends Controller
             'title' => 'Semua Kelas',
         ];
 
-        return view('grade.create', $data);
+        return view('master-data.classrooms.create', $data);
     }
 
     /**
@@ -59,7 +59,7 @@ class GradeController extends Controller
 
         $validatedData['slug'] = Str::slug($request->name);
 
-        Grade::create($validatedData);
+        Classroom::create($validatedData);
 
         return redirect('/admin/grades')->with('success', 'Data Kelas Berhasil Ditambahkan');
     }
@@ -69,7 +69,7 @@ class GradeController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function show(Grade $grade)
+    public function show(Classroom $grade)
     {
         //
     }
@@ -79,7 +79,7 @@ class GradeController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function edit(Grade $grade)
+    public function edit(Classroom $grade)
     {
         Helper::addHistory('/admin/grades/'.$grade->slug.'/edit', 'Ubah Kelas');
 
@@ -88,7 +88,7 @@ class GradeController extends Controller
             'grade' => $grade,
         ];
 
-        return view('grade.edit', $data);
+        return view('master-data.classrooms.edit', $data);
     }
 
     /**
@@ -96,7 +96,7 @@ class GradeController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function update(UpdateGradeRequest $request, Grade $grade)
+    public function update(UpdateGradeRequest $request, Classroom $grade)
     {
         if ($request->oldName === $request->name) {
             return back()->with('nameError', 'Data Not Changed');
@@ -107,7 +107,7 @@ class GradeController extends Controller
 
             $validatedData['slug'] = Str::slug($request->name);
 
-            Grade::where('id', $grade->id)->update($validatedData);
+            Classroom::where('id', $grade->id)->update($validatedData);
         }
 
         return redirect('/admin/grades')->with('success', 'Data Kelas Berhasil Diperbarui');
@@ -118,11 +118,11 @@ class GradeController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function destroy(Grade $grade)
+    public function destroy(Classroom $grade)
     {
         $students = Student::where('grade_id', $grade->id)->count();
         $schedules = Schedule::where('grade_id', $grade->id)->count();
-        $homeroomTeacher = HomeroomTeacher::where('grade_id', $grade->id)->count();
+        $homeroomTeacher = Homeroom::where('grade_id', $grade->id)->count();
 
         if ($students > 0) {
             return redirect('/admin/grades')->with('sAError', 'Kelas Ini Digunakan Oleh '.$students.' Siswa. Silahkan Edit Data Siswa Terlebih Dahulu');
@@ -136,7 +136,7 @@ class GradeController extends Controller
             return redirect('/admin/grades')->with('sAError', 'Kelas Ini Digunakan Oleh '.$homeroomTeacher.' Wali Kelas. Silahkan Edit Data Wali Kelas Terlebih Dahulu');
         }
 
-        Grade::destroy($grade->id);
+        Classroom::destroy($grade->id);
 
         return redirect('/admin/grades')->with('success', 'Data Kelas '.$grade->name.' Berhasil Dihapus');
     }

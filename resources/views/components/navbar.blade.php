@@ -1,34 +1,22 @@
 <div class="main-header">
     <div class="logo-header" data-background-color="blue">
 
-        <a href="#" class="logo d-none d-lg-block">
+        <a href="{{ route('dashboard.home') }}" class="logo d-none d-lg-block">
             <img src="/img/logo2.png" alt="navbar brand" class="navbar-brand pb-2" width="30">
             <b class="text-white me-3">SMKN 1 BANTUL</b>
         </a>
         <button class="navbar-toggler sidenav-toggler ml-auto" type="button" data-toggle="collapse"
             data-target="collapse" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="currentColor"
-                    class="bi bi-list" viewBox="0 0 16 16">
-                    <path fill-rule="evenodd"
-                        d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z" />
-                </svg>
+                <i class="fas fa-bars" style="font-size: 25px;"></i>
             </span>
         </button>
         <button class="topbar-toggler more">
-            <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="currentColor"
-                class="bi bi-three-dots-vertical" viewBox="0 0 16 16">
-                <path
-                    d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z" />
-            </svg>
+            <i class="fas fa-ellipsis-v" style="font-size: 25px;"></i>
         </button>
         <div class="nav-toggle">
             <button class="btn btn-toggle toggle-sidebar">
-                <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" fill="currentColor"
-                    class="bi bi-list" viewBox="0 0 16 16">
-                    <path fill-rule="evenodd"
-                        d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z" />
-                </svg>
+                <i class="fas fa-bars" style="font-size: 25px;"></i>
             </button>
         </div>
     </div>
@@ -41,12 +29,15 @@
             <ul class="navbar-nav topbar-nav ml-md-auto align-items-center">
                 <li class="nav-item" style="margin-right: 70px; padding-bottom: 5px">
                     <div class="dropdown">
-                        <a class="dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-expanded="false">
-                            <img src="/img/qr.png" alt="QR" title="Halaman Absensi" class="qr-icon">
+                        <a class="qr-trigger" href="#" data-bs-toggle="dropdown" aria-expanded="false"
+                            title="QR Code Presensi">
+                            <i class="fas fa-qrcode"></i>
                         </a>
                         <ul class="dropdown-menu animated fadeIn">
-                            <li><a class="dropdown-item" href="/attendance">Absen Masuk</a></li>
-                            <li><a class="dropdown-item" href="/attendance-home">Absen Pulang</a></li>
+                            <li><a class="dropdown-item" href="{{ route('dashboard.display.attendance.today') }}"><i
+                                        class="fas fa-sign-in-alt me-2"></i>Display Presensi Hari Ini</a></li>
+                            <li><a class="dropdown-item" href="{{ route('dashboard.config.qr.display') }}"><i
+                                        class="fas fa-qrcode me-2"></i>QR Code Presensi</a></li>
                         </ul>
                     </div>
 
@@ -54,105 +45,54 @@
                 <li class="nav-item dropdown hidden-caret">
                     <a class="dropdown-toggle profile-pic" data-toggle="dropdown" href="#" aria-expanded="false">
                         <div class="avatar-sm" style="margin-left: -50px; margin-bottom: 20px;">
-                            @if (Auth::guard('teacher')->check())
-                                <div class="pt-2">
-                                    @if (Auth::guard('teacher')->user()->profile_pic)
-                                        <div class="avatar-lg"><img
-                                                src="{{ asset('storage/' . Auth::guard('teacher')->user()->profile_pic) }}"
-                                                alt="image profile" class="avatar-img-nav rounded-circle img-fluid">
-                                        </div>
-                                    @else
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="37" height="37"
-                                            class="user-profile" fill="currentColor" class="bi bi-person-circle"
-                                            viewBox="0 0 16 16">
-                                            <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" />
-                                            <path fill-rule="evenodd"
-                                                d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1z" />
-                                        </svg>
-                                    @endif
-                                </div>
-                            @endif
-                            @if (Auth::guard('user')->check())
-                                <div class="pt-2">
-                                    @if (Auth::guard('user')->user()->profile_pic)
-                                        <div class="avatar"><img
-                                                src="{{ asset('storage/' . Auth::guard('user')->user()->profile_pic) }}"
-                                                alt="image profile" class="avatar-img-nav rounded-circle img-fluid">
-                                        </div>
-                                    @else
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="37" height="37"
-                                            class="user-profile" fill="currentColor" class="bi bi-person-circle"
-                                            viewBox="0 0 16 16">
-                                            <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" />
-                                            <path fill-rule="evenodd"
-                                                d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1z" />
-                                        </svg>
-                                    @endif
-                                </div>
-                                {{-- <div class="avatar-lg">
-                                    <img src="/img/account.png" alt="image profile"
-                                        class="avatar-img rounded-circle img-fluid">
-                                </div> --}}
-                            @endif
+                            <div class="pt-2">
+                                @if (Auth::check() && Auth::user()->profile_picture)
+                                    <div class="avatar-lg"><img
+                                            src="{{ asset('storage/' . Auth::user()->profile_picture) }}"
+                                            alt="image profile" class="avatar-img-nav rounded-circle img-fluid">
+                                    </div>
+                                @else
+                                    <i class="fas fa-user-circle" style="font-size: 37px; color: #495057;"></i>
+                                @endif
+                            </div>
                         </div>
                     </a>
                     <ul class="dropdown-menu dropdown-user animated fadeIn">
                         <div class="dropdown-user-scroll scrollbar-outer">
                             <li>
                                 <div class="user-box">
-                                    @if (Auth::guard('teacher')->check())
-                                        @if (Auth::guard('teacher')->user()->profile_pic)
-                                            <div class="avatar-lg"><img
-                                                    src="{{ asset('storage/' . Auth::guard('teacher')->user()->profile_pic) }}"
-                                                    alt="image profile"
-                                                    class="avatar-img-nav rounded-circle img-fluid">
-                                            </div>
-                                        @else
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"
-                                                class="user-profile" fill="currentColor" class="bi bi-person-circle"
-                                                viewBox="0 0 16 16">
-                                                <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" />
-                                                <path fill-rule="evenodd"
-                                                    d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1z" />
-                                            </svg>
-                                        @endif
-                                    @endif
-                                    @if (Auth::guard('user')->check())
-                                        @if (Auth::guard('user')->user()->profile_pic)
-                                            <div class="avatar-lg"><img
-                                                    src="{{ asset('storage/' . Auth::guard('user')->user()->profile_pic) }}"
-                                                    alt="image profile" class="avatar-img rounded-circle img-fluid">
-                                            </div>
-                                        @else
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"
-                                                class="user-profile" fill="currentColor" class="bi bi-person-circle"
-                                                viewBox="0 0 16 16">
-                                                <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" />
-                                                <path fill-rule="evenodd"
-                                                    d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1z" />
-                                            </svg>
-                                        @endif
+                                    @if (Auth::check() && Auth::user()->profile_picture)
+                                        <div class="avatar-lg"><img
+                                                src="{{ asset('storage/' . Auth::user()->profile_picture) }}"
+                                                alt="image profile" class="avatar-img-nav rounded-circle img-fluid">
+                                        </div>
+                                    @else
+                                        <i class="fas fa-user-circle" style="font-size: 40px; color: #495057;"></i>
                                     @endif
 
                                     <div class="u-text">
-                                        <h4>{{ Auth::user()->name }}</h4>
-                                        <p class="text-muted">{{ Auth::user()->email }}</p>
+                                        <h4>{{ Auth::check() ? Auth::user()->name : 'Guest' }}</h4>
+                                        <p class="text-muted">{{ Auth::check() ? Auth::user()->email : '' }}</p>
 
                                     </div>
                                 </div>
                             </li>
                             <li>
                                 <div class="dropdown-divider"></div>
-                                <a class="dropdown-item" href="/admin/change-password" class="collapsed">Ganti
-                                    Password</a>
+                                <a class="dropdown-item" href="{{ route('dashboard.profile.edit') }}">
+                                    <i class="fas fa-key me-2"></i>Ganti Password
+                                </a>
                                 <div class="dropdown-divider"></div>
-                                <a class="dropdown-item" href="/admin/change-pic" class="collapsed">Ganti
-                                    Foto Profile</a>
+                                <a class="dropdown-item" href="{{ route('dashboard.profile.edit') }}">
+                                    <i class="fas fa-camera me-2"></i>Ganti Foto Profile
+                                </a>
                                 <div class="dropdown-divider"></div>
-                                <form action="/admin/logout" method="POST" class="dropdown-item">
+                                <form action="{{ route('dashboard.logout') }}" method="POST" class="dropdown-item">
                                     @csrf
                                     <button type="submit"
-                                        class="btn btn-primary btn-sm w-100 rounded collapsed btn-logout">Logout</button>
+                                        class="btn btn-danger btn-sm w-100 rounded collapsed btn-logout">
+                                        <i class="fas fa-sign-out-alt me-2"></i>Logout
+                                    </button>
                                 </form>
                             </li>
                         </div>

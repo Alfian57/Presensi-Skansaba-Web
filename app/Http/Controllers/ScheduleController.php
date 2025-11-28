@@ -2,175 +2,203 @@
 
 namespace App\Http\Controllers;
 
-use App\Helper;
-use App\Http\Requests\StoreScheduleRequest;
-use App\Http\Requests\UpdateScheduleRequest;
-use App\Models\Grade;
-use App\Models\OtherData;
+use App\Http\Requests\Schedule\StoreScheduleRequest;
+use App\Http\Requests\Schedule\UpdateScheduleRequest;
+use App\Models\Classroom;
 use App\Models\Schedule;
 use App\Models\Subject;
 use App\Models\Teacher;
+use App\Services\ScheduleService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use RealRashid\SweetAlert\Facades\Alert;
 
 class ScheduleController extends Controller
 {
+    public function __construct(
+        private ScheduleService $scheduleService
+    ) {}
+
     /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
+     * Display a listing of schedules.
      */
-    public function index()
+    public function index(Request $request)
     {
-        Helper::addHistory('/admin/schedules', 'Jadwal Mengajar');
+        $query = Schedule::with(['classroom', 'subject', 'teacher.user']);
 
-        $data = [
-            'title' => 'Semua Jadwal Pelajaran',
-            'schedules' => Schedule::latest()->with('grade', 'subject', 'teacher')->get(),
-        ];
+        // Filter by classroom
+        if ($request->filled('classroom_id')) {
+            $query->where('classroom_id', $request->classroom_id);
+        }
 
-        return view('schedule.index', $data);
+        // Filter by teacher
+        if ($request->filled('teacher_id')) {
+            $query->where('teacher_id', $request->teacher_id);
+        }
+
+        // Filter by day
+        if ($request->filled('day')) {
+            $query->where('day', $request->day);
+        }
+
+        // Filter by academic year
+        if ($request->filled('academic_year')) {
+            $query->where('academic_year', $request->academic_year);
+        }
+
+        // Filter by semester
+        if ($request->filled('semester')) {
+            $query->where('semester', $request->semester);
+        }
+
+        $schedules = $query->orderBy('day')
+            ->orderBy('start_time')
+            ->get();
+
+        $classrooms = Classroom::orderBy('grade_level')
+            ->orderBy('major')
+            ->orderBy('class_number')
+            ->get();
+
+        $teachers = Teacher::with(['user'])
+            ->whereHas('user')
+            ->get();
+
+        $days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+        return view('master-data.schedules.index', compact('schedules', 'classrooms', 'teachers', 'days'));
     }
 
     /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
+     * Show the form for creating a new schedule.
      */
     public function create()
     {
-        Helper::addHistory('/admin/schedules/create', 'Tambah Jadwal Mengajar');
+        $classrooms = Classroom::orderBy('grade_level')
+            ->orderBy('major')
+            ->orderBy('class_number')
+            ->get();
 
-        $days = OtherData::where('name', 'Hari Masuk')->first();
-        $days = explode(', ', $days->value);
+        $subjects = Subject::orderBy('name')->get();
 
-        $data = [
-            'title' => 'Tambah Jadwal Pelajaran',
-            'teachers' => Teacher::latest()->get(),
-            'subjects' => Subject::latest()->get(),
-            'days' => $days,
-            'grades' => Grade::latest()->get(),
-        ];
+        $teachers = Teacher::with(['user'])
+            ->whereHas('user')
+            ->get();
 
-        return view('schedule.create', $data);
+        $days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+        return view('master-data.schedules.create', compact('classrooms', 'subjects', 'teachers', 'days'));
     }
 
     /**
-     * Store a newly created resource in storage.
-     *
-     * @return \Illuminate\Http\Response
+     * Store a newly created schedule.
      */
     public function store(StoreScheduleRequest $request)
     {
-        $request->class_year = strtolower($request->class_year);
-        $validatedData = $request->validate([
-            'training_year' => 'required',
-            'class_year' => 'required',
-            'teacher_id' => 'required',
-            'subject_id' => 'required',
-            'day' => 'required',
-            'grade_id' => 'required',
-            'time_start' => 'required',
-            'time_finish' => 'required',
-        ]);
+        try {
+            $schedule = $this->scheduleService->create($request->validated());
 
-        Schedule::create($validatedData);
+            Alert::success('Berhasil', 'Jadwal berhasil ditambahkan.');
 
-        return redirect('/admin/schedules')->with('success', 'Jadwal Pelajaran Baru Berhasil Ditambahkan');
+            return redirect()->route('dashboard.schedules.index');
+        } catch (\Exception $e) {
+            Alert::error('Gagal', 'Terjadi kesalahan: '.$e->getMessage());
+
+            return back()->withInput();
+        }
     }
 
     /**
-     * Display the specified resource.
-     *
-     * @return \Illuminate\Http\Response
+     * Display the specified schedule.
      */
     public function show(Schedule $schedule)
     {
-        //
+        $schedule->load(['classroom', 'subject', 'teacher.user']);
+
+        return view('master-data.schedules.show', compact('schedule'));
     }
 
     /**
-     * Show the form for editing the specified resource.
-     *
-     * @return \Illuminate\Http\Response
+     * Show the form for editing the specified schedule.
      */
     public function edit(Schedule $schedule)
     {
-        Helper::addHistory('/admin/schedules/'.$schedule->id.'/edit', 'Ubah Jadwal Mengajar');
+        $schedule->load(['classroom', 'subject', 'teacher.user']);
 
-        $days = OtherData::where('name', 'Hari Masuk')->first();
-        $days = explode(', ', $days->value);
+        $classrooms = Classroom::orderBy('grade_level')
+            ->orderBy('major')
+            ->orderBy('class_number')
+            ->get();
 
-        $data = [
-            'title' => 'Edit Data Jadwal Pelajaran',
-            'schedule' => $schedule,
-            'teachers' => Teacher::latest()->get(),
-            'subjects' => Subject::latest()->get(),
-            'days' => $days,
-            'grades' => Grade::latest()->get(),
-        ];
+        $subjects = Subject::orderBy('name')->get();
 
-        return view('schedule.edit', $data);
+        $teachers = Teacher::with(['user'])
+            ->whereHas('user')
+            ->get();
+
+        $days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+        return view('master-data.schedules.edit', compact('schedule', 'classrooms', 'subjects', 'teachers', 'days'));
     }
 
     /**
-     * Update the specified resource in storage.
-     *
-     * @return \Illuminate\Http\Response
+     * Update the specified schedule.
      */
     public function update(UpdateScheduleRequest $request, Schedule $schedule)
     {
-        $request->class_year = strtolower($request->class_year);
-        $validatedData = $request->validate([
-            'training_year' => 'required',
-            'class_year' => 'required|in:ganjil,genap',
-            'teacher_id' => 'required',
-            'subject_id' => 'required',
-            'day' => 'required',
-            'grade_id' => 'required',
-            'time_start' => 'required',
-            'time_finish' => 'required',
-        ]);
+        try {
+            $schedule = $this->scheduleService->update($schedule, $request->validated());
 
-        Schedule::where('id', $schedule->id)->update($validatedData);
+            Alert::success('Berhasil', 'Jadwal berhasil diperbarui.');
 
-        return redirect('/admin/schedules')->with('success', 'Jadwal Pelajaran Berhasil Diupdate');
+            return redirect()->route('dashboard.schedules.index');
+        } catch (\Exception $e) {
+            Alert::error('Gagal', 'Terjadi kesalahan: '.$e->getMessage());
+
+            return back()->withInput();
+        }
     }
 
     /**
-     * Remove the specified resource from storage.
-     *
-     * @return \Illuminate\Http\Response
+     * Remove the specified schedule.
      */
     public function destroy(Schedule $schedule)
     {
-        Schedule::destroy($schedule->id);
+        try {
+            $this->scheduleService->delete($schedule);
 
-        return redirect('/admin/schedules')->with('success', 'Jadwal Pelajaran Berhasil Dihapus');
+            Alert::success('Berhasil', 'Jadwal berhasil dihapus.');
+
+            return redirect()->route('dashboard.schedules.index');
+        } catch (\Exception $e) {
+            Alert::error('Gagal', 'Terjadi kesalahan: '.$e->getMessage());
+
+            return back();
+        }
     }
 
-    public function mySchedule()
+    /**
+     * Display teacher's schedules.
+     */
+    public function mySchedules()
     {
-        Helper::addHistory('/admin/myschedules', 'Jadwalku');
+        $teacher = Auth::user()->teacher;
 
-        $schedules = [
-            'senin' => Schedule::where('teacher_id', Auth::guard('teacher')->user()->id)->orderBy('time_start', 'ASC')->where('day', 'senin')->get(),
-            'selasa' => Schedule::where('teacher_id', Auth::guard('teacher')->user()->id)->orderBy('time_start', 'ASC')->where('day', 'selasa')->get(),
-            'rabu' => Schedule::where('teacher_id', Auth::guard('teacher')->user()->id)->orderBy('time_start', 'ASC')->where('day', 'rabu')->get(),
-            'kamis' => Schedule::where('teacher_id', Auth::guard('teacher')->user()->id)->orderBy('time_start', 'ASC')->where('day', 'kamis')->get(),
-            'jumat' => Schedule::where('teacher_id', Auth::guard('teacher')->user()->id)->orderBy('time_start', 'ASC')->where('day', 'jumat')->get(),
-        ];
+        if (! $teacher) {
+            Alert::error('Error', 'Data guru tidak ditemukan.');
 
-        $isNotEmpty = false;
-        foreach ($schedules as $key => $schedule) {
-            if (! $schedule->isEmpty()) {
-                $isNotEmpty = true;
-            }
+            return redirect()->route('dashboard.home');
         }
 
-        return view('schedule.myschedule', [
-            'title' => 'My Schedule',
-            'schedules' => $schedules,
-            'isNotEmpty' => $isNotEmpty,
-        ]);
+        $schedules = Schedule::where('teacher_id', $teacher->id)
+            ->with(['grade', 'subject'])
+            ->orderBy('day')
+            ->orderBy('start_time')
+            ->get()
+            ->groupBy('day');
+
+        $days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+
+        return view('master-data.schedules.my-schedule', compact('schedules', 'days'));
     }
 }

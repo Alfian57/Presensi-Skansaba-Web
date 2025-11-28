@@ -2,16 +2,40 @@
 
 namespace App\Models;
 
+use App\Enums\Day;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Schedule extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
-    protected $guarded = [
-        'id',
+    protected $fillable = [
+        'classroom_id',
+        'subject_id',
+        'teacher_id',
+        'academic_year',
+        'semester',
+        'day',
+        'start_time',
+        'end_time',
+        'room',
+        'is_active',
     ];
+
+    protected $casts = [
+        'start_time' => 'datetime',
+        'end_time' => 'datetime',
+        'semester' => 'integer',
+        'is_active' => 'boolean',
+        'day' => Day::class,
+    ];
+
+    public function classroom()
+    {
+        return $this->belongsTo(Classroom::class);
+    }
 
     public function teacher()
     {
@@ -23,8 +47,30 @@ class Schedule extends Model
         return $this->belongsTo(Subject::class);
     }
 
-    public function grade()
+    public function scopeActive($query)
     {
-        return $this->belongsTo(Grade::class);
+        return $query->where('is_active', true);
+    }
+
+    public function scopeByDay($query, $day)
+    {
+        return $query->where('day', $day);
+    }
+
+    public function scopeByClassroom($query, $classroomId)
+    {
+        return $query->where('classroom_id', $classroomId);
+    }
+
+    public function scopeByTeacher($query, $teacherId)
+    {
+        return $query->where('teacher_id', $teacherId);
+    }
+
+    public function scopeCurrentAcademicYear($query)
+    {
+        $currentYear = config('attendance.academic_year', date('Y'));
+
+        return $query->where('academic_year', $currentYear);
     }
 }

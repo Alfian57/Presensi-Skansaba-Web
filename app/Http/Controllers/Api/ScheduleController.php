@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Grade;
+use App\Models\ClassAbsence;
+use App\Models\Classroom;
 use App\Models\Schedule;
-use App\Models\SkippingClass;
 use App\Models\Student;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -64,12 +64,12 @@ class ScheduleController extends Controller
             return response()->json($response);
         }
 
-        $grade = Grade::where('id', $student->grade_id)->first();
+        $grade = Classroom::where('id', $student->grade_id)->first();
         if ($grade == null) {
             return response()->json($response);
         }
 
-        $pickedSubject = SkippingClass::where('student_id', $student->id)
+        $pickedSubject = ClassAbsence::where('student_id', $student->id)
             ->whereDate('created_at', '=', Carbon::now()->format('Y-m-d'))
             ->pluck('subject_id');
 

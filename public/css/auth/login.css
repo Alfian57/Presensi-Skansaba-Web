@@ -1,0 +1,332 @@
+/* ==========================================
+   Login Page Styles
+   ========================================== */
+
+/* Reset & Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: url('/img/bg.jpg') no-repeat center center fixed;
+    background-size: cover;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    position: relative;
+}
+
+body::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 0;
+}
+
+/* Login Container */
+.login-container {
+    width: 100%;
+    max-width: 1000px;
+    background: white;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    display: flex;
+    flex-direction: row;
+    position: relative;
+    z-index: 1;
+}
+
+/* Left Side - Form */
+.login-left {
+    flex: 1;
+    padding: 50px 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background: white;
+}
+
+.login-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.login-subtitle {
+    color: #7f8c8d;
+    margin-bottom: 35px;
+    text-align: center;
+    font-size: 0.95rem;
+}
+
+/* Form Styles */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 8px;
+    color: #2c3e50;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.input-group-custom {
+    position: relative;
+}
+
+.input-group-custom i {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #3498db;
+    font-size: 1.1rem;
+}
+
+.form-control-custom {
+    width: 100%;
+    padding: 12px 15px 12px 45px;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    background: #f8f9fa;
+}
+
+.form-control-custom:focus {
+    outline: none;
+    border-color: #3498db;
+    background: white;
+    box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.1);
+}
+
+.form-check-custom {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 25px;
+}
+
+.form-check-custom input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #3498db;
+}
+
+.form-check-custom label {
+    color: #7f8c8d;
+    cursor: pointer;
+    user-select: none;
+    font-size: 0.9rem;
+}
+
+/* Buttons */
+.btn-login {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-bottom: 15px;
+}
+
+.btn-login:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(52, 152, 219, 0.4);
+}
+
+.btn-login:active {
+    transform: translateY(0);
+}
+
+.btn-return {
+    width: 100%;
+    padding: 14px;
+    background: white;
+    color: #3498db;
+    border: 2px solid #3498db;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-return:hover {
+    background: #ebf5fb;
+    transform: translateY(-2px);
+}
+
+.btn-return:active {
+    transform: translateY(0);
+}
+
+/* Right Side - School Info */
+.login-right {
+    flex: 1;
+    background: url('/img/bg-login.png') no-repeat center center;
+    background-size: cover;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    text-align: center;
+    position: relative;
+}
+
+.login-right::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(52, 152, 219, 0.9) 0%, rgba(41, 128, 185, 0.9) 100%);
+    z-index: 0;
+}
+
+.login-right > * {
+    position: relative;
+    z-index: 1;
+}
+
+.school-logo {
+    width: 130px;
+    height: 130px;
+    margin-bottom: 25px;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+}
+
+.school-name {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+    letter-spacing: 1px;
+}
+
+.school-tagline {
+    font-size: 1.05rem;
+    opacity: 0.95;
+    font-weight: 300;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .login-container {
+        flex-direction: column-reverse;
+        max-width: 500px;
+    }
+
+    .login-left,
+    .login-right {
+        padding: 30px 25px;
+    }
+
+    .login-title {
+        font-size: 1.6rem;
+    }
+
+    .login-subtitle {
+        font-size: 0.9rem;
+    }
+
+    .school-logo {
+        width: 90px;
+        height: 90px;
+        margin-bottom: 15px;
+    }
+
+    .school-name {
+        font-size: 1.5rem;
+    }
+
+    .school-tagline {
+        font-size: 0.95rem;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        padding: 10px;
+    }
+
+    .login-left {
+        padding: 25px 20px;
+    }
+
+    .login-right {
+        padding: 25px 20px;
+    }
+
+    .login-title {
+        font-size: 1.4rem;
+    }
+
+    .login-subtitle {
+        font-size: 0.85rem;
+        margin-bottom: 25px;
+    }
+
+    .form-control-custom {
+        padding: 11px 12px 11px 42px;
+        font-size: 0.9rem;
+    }
+
+    .btn-login,
+    .btn-return {
+        padding: 12px;
+        font-size: 0.95rem;
+    }
+
+    .school-logo {
+        width: 75px;
+        height: 75px;
+    }
+
+    .school-name {
+        font-size: 1.3rem;
+    }
+
+    .school-tagline {
+        font-size: 0.85rem;
+    }
+}
+
+/* Animation */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.login-container {
+    animation: fadeIn 0.5s ease-out;
+}

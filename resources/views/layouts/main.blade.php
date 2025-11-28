@@ -3,9 +3,14 @@
 
 <head>
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <title>Absensi Siswa | {{ $title }}</title>
+    <title>Presensi Siswa | {{ $title ?? 'Dashboard' }}</title>
     <meta content='width=device-width, initial-scale=1.0, shrink-to-fit=no' name='viewport' />
     <link rel="icon" href="/img/icon.ico" type="image/x-icon" />
+
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+        integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
 
     <script src="/js/plugin/webfont/webfont.min.js"></script>
     <script>
@@ -19,7 +24,7 @@
                 ],
                 urls: ['/css/fonts.min.css']
             },
-            active: function() {
+            active: function () {
                 sessionStorage.fonts = true;
             }
         });
@@ -28,7 +33,7 @@
     <!--   Core JS Files   -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous">
-    </script>
+        </script>
     <script src="/js/core/jquery.3.2.1.min.js"></script>
     <script src="/js/core/popper.min.js"></script>
     <script src="/js/core/bootstrap.min.js"></script>
@@ -76,29 +81,22 @@
 
         <div class="main-panel">
             <div class="content">
-                @if (Request::is('admin/home'))
-                    <div class="bg-primary" style="height: 175px">
-                    </div>
-                    <div class="p-5" style="margin-top: -175px">
-                        @yield('content')
-                        @include('components.chart')
-                    </div>
-                @else
-                    <div class="p-5">
-                        @yield('content')
-                    </div>
-                @endif
+                <div class="p-4">
+                    @yield('content')
+                </div>
             </div>
 
             <footer class="footer">
                 <div class="container">
                     <div class="copyright ml-auto">
-                        &copy; <?php echo date('Y'); ?> Absensi Siswa SMKN 1 BANTUL (2022)
+                        &copy; <?php echo date('Y'); ?> Presensi Siswa SMKN 1 BANTUL (2022)
                     </div>
                 </div>
             </footer>
         </div>
     </div>
+
+    @stack('scripts')
 </body>
 
 </html>

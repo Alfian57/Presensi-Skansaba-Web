@@ -19,7 +19,7 @@ class OtherDataController extends Controller
             'otherDatas' => OtherData::orderBy('id', 'ASC')->get(),
         ];
 
-        return view('otherData.index', $data);
+        return view('system.other-data.index', $data);
     }
 
     public function edit($id)
@@ -52,7 +52,7 @@ class OtherDataController extends Controller
             'otherData' => $otherData,
         ];
 
-        return view('otherData.edit', $data);
+        return view('system.other-data.edit', $data);
     }
 
     public function update(UpdateOtherDataRequest $request)

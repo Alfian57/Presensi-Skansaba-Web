@@ -3,219 +3,214 @@
 namespace App\Http\Controllers;
 
 use App\Exports\StudentExport;
-use App\Helper;
-use App\Http\Requests\StoreStudentRequest;
-use App\Http\Requests\UpdateStudentRequest;
-use App\Models\Attendance;
-use App\Models\Grade;
+use App\Http\Requests\Student\StoreStudentRequest;
+use App\Http\Requests\Student\UpdateStudentRequest;
+use App\Models\Classroom;
 use App\Models\Student;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\Storage;
+use App\Services\StudentService;
+use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
+use RealRashid\SweetAlert\Facades\Alert;
 
 class StudentController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function index()
+    public function __construct(
+        private StudentService $studentService
+    ) {}
+
+    public function index(Request $request)
     {
-        Helper::addHistory('/admin/students', 'Siswa');
+        $query = Student::with(['user', 'classroom']);
 
-        $students = Student::latest()->with('grade');
-
-        if (request('grade')) {
-            $grade = Grade::where('slug', request('slug'))->first();
-
-            if ($grade != null) {
-                $gradeId = $grade->id;
-            } else {
-                $gradeId = 0;
-            }
-
-            $students->where('grade_id', $gradeId);
+        // Filter by classroom
+        if ($request->filled('classroom_id')) {
+            $query->where('classroom_id', $request->classroom_id);
         }
 
-        if (request('nisn')) {
-            $students->where('nisn', request('nisn'));
+        // Search by NISN
+        if ($request->filled('nisn')) {
+            $query->where('nisn', 'like', '%'.$request->nisn.'%');
         }
 
-        $data = [
-            'title' => 'Semua Siswa',
-            'students' => $students->limit(500)->get(),
-            'grades' => Grade::orderBy('name', 'ASC')->get(),
-        ];
+        $students = $query->orderBy('nisn')->get();
+        $classrooms = Classroom::orderBy('grade_level')->orderBy('major')->orderBy('class_number')->get();
 
-        return view('student.index', $data);
+        return view('users.students.index', compact('students', 'classrooms'));
     }
 
     /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
+     * Show the form for creating a new student.
      */
     public function create()
     {
-        Helper::addHistory('/admin/students/create', 'Tambah Siswa');
+        $classrooms = Classroom::orderBy('grade_level')->orderBy('major')->orderBy('class_number')->get();
 
-        $data = [
-            'title' => 'Tambah Siswa',
-            'grades' => Grade::orderBy('name', 'ASC')->get(),
-        ];
-
-        return view('student.create', $data);
+        return view('users.students.create', compact('classrooms'));
     }
 
     /**
-     * Store a newly created resource in storage.
-     *
-     * @return \Illuminate\Http\Response
+     * Store a newly created student.
      */
     public function store(StoreStudentRequest $request)
     {
-        $validatedData = $request->validate([
-            'nisn' => 'required|digits:10|unique:students',
-            'nis' => 'required|digits:5|unique:students',
-            'name' => 'required|max:255',
-            'date_of_birth' => 'required',
-            'gender' => 'required',
-            'address' => 'required',
-            'grade_id' => 'required',
-            'entry_year' => 'required|digits:4|integer|min:1900|max:'.(date('Y') + 1),
-            'profile_pic' => 'image|file|max:10000',
-        ]);
+        try {
+            $student = $this->studentService->create($request->validated());
 
-        $validatedData['password'] = '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi';
-        if ($request->profile_pic) {
-            $validatedData['profile_pic'] = $request->file('profile_pic')->store('student_profile_pic', 'public');
+            Alert::success('Berhasil', "Siswa {$student->user->name} berhasil ditambahkan.");
+
+            return redirect()->route('dashboard.students.index');
+        } catch (\Exception $e) {
+            Alert::error('Gagal', 'Terjadi kesalahan: '.$e->getMessage());
+
+            return back()->withInput();
         }
-
-        $student = Student::create($validatedData);
-
-        $now = Carbon::now();
-        $now->setTimezone('Asia/Jakarta');
-        $now = $now->toTimeString();
-        Attendance::create([
-            'student_id' => $student->id,
-            'desc' => 'alpha',
-            'present_date' => date('Y-m-d'),
-            'present_time' => $now,
-        ]);
-
-        return redirect('/admin/students')->with('success', 'Siswa Baru Berhasil Ditambahkan');
     }
 
     /**
-     * Display the specified resource.
-     *
-     * @return \Illuminate\Http\Response
+     * Display the specified student.
      */
     public function show(Student $student)
     {
-        Helper::addHistory('/admin/students/'.$student->nisn, 'Detail Siswa');
+        $student->load([
+            'user',
+            'classroom',
+            'attendances' => function ($q) {
+                $q->latest('date')->limit(30);
+            },
+        ]);
 
-        $data = [
-            'title' => 'Siswa '.$student->name,
-            'student' => $student,
-        ];
-
-        return view('student.show', $data);
+        return view('users.students.show', compact('student'));
     }
 
     /**
-     * Show the form for editing the specified resource.
-     *
-     * @return \Illuminate\Http\Response
+     * Show the form for editing the specified student.
      */
     public function edit(Student $student)
     {
-        Helper::addHistory('/admin/students/'.$student->nisn.'/edit', 'Ubah Siswa');
+        $student->load(['user', 'classroom']);
+        $classrooms = Classroom::orderBy('grade_level')->orderBy('major')->orderBy('class_number')->get();
 
-        $data = [
-            'title' => 'Edit Data Siswa',
-            'student' => $student,
-            'grades' => Grade::orderBy('name', 'ASC')->get(),
-        ];
-
-        return view('student.edit', $data);
+        return view('users.students.edit', compact('student', 'classrooms'));
     }
 
     /**
-     * Update the specified resource in storage.
-     *
-     * @return \Illuminate\Http\Response
+     * Update the specified student.
      */
     public function update(UpdateStudentRequest $request, Student $student)
     {
-        $validatedData = $request->validate([
-            'nisn' => 'required|digits:10',
-            'nis' => 'required|digits:5',
-            'name' => 'required|max:255',
-            'date_of_birth' => 'required',
-            'gender' => 'required',
-            'address' => 'required',
-            'grade_id' => 'required',
-            'entry_year' => 'required|digits:4|integer|min:1900|max:'.(date('Y') + 1),
-            'profile_pic' => 'image|file|max:10000',
-        ]);
+        try {
+            $student = $this->studentService->update($student, $request->validated());
 
-        if ($request->old_nisn !== $request->nisn) {
-            $validatedData['nisn'] = $request->validate([
-                'nisn' => 'unique:students',
-            ]);
-            $validatedData['nisn'] = $request->nisn;
+            Alert::success('Berhasil', "Data siswa {$student->user->name} berhasil diperbarui.");
+
+            return redirect()->route('dashboard.students.index');
+        } catch (\Exception $e) {
+            Alert::error('Gagal', 'Terjadi kesalahan: '.$e->getMessage());
+
+            return back()->withInput();
         }
-
-        if ($request->old_nis !== $request->nis) {
-            $validatedData['nis'] = $request->validate([
-                'nis' => 'unique:students',
-            ]);
-            $validatedData['nis'] = $request->nis;
-        }
-
-        if ($request->deleteImage == 'true') {
-            Storage::delete($request->old_profile_pic);
-            $validatedData['profile_pic'] = null;
-        } else {
-            if ($request->profile_pic !== $request->old_profile_pic) {
-                if ($request->profile_pic) {
-                    $validatedData['profile_pic'] = $request->file('profile_pic')->store('student_profile_pic', 'public');
-                }
-                if ($request->old_profile_pic) {
-                    Storage::delete($request->old_profile_pic);
-                }
-            } else {
-                $validatedData['profile_pic'] = $request->old_profile_pic;
-            }
-        }
-
-        $validatedData['password'] = '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi';
-
-        Student::where('id', $student->id)->update($validatedData);
-
-        return redirect('/admin/students')->with('success', 'Data Siswa Berhasil Diperbarui');
     }
 
     /**
-     * Remove the specified resource from storage.
-     *
-     * @return \Illuminate\Http\Response
+     * Remove the specified student.
      */
     public function destroy(Student $student)
     {
-        if ($student->profile_pic) {
-            Storage::delete($student->profile_pic);
+        try {
+            $name = $student->user->name;
+            $this->studentService->delete($student);
+
+            Alert::success('Berhasil', "Siswa {$name} berhasil dihapus.");
+
+            return redirect()->route('dashboard.students.index');
+        } catch (\Exception $e) {
+            Alert::error('Gagal', 'Terjadi kesalahan: '.$e->getMessage());
+
+            return back();
         }
-
-        Student::destroy($student->id);
-
-        return redirect('/admin/students')->with('success', 'Data Siswa '.$student->name.' Berhasil Dihapus');
     }
 
-    public function exportExcel()
+    /**
+     * Reset student password.
+     */
+    public function resetPassword(Student $student)
     {
-        return Excel::download(new StudentExport, 'siswa.xlsx');
+        try {
+            $newPassword = 'password'; // Default password
+            $this->studentService->resetPassword($student, $newPassword);
+
+            Alert::success('Berhasil', "Password siswa {$student->user->name} berhasil direset ke: {$newPassword}");
+
+            return back();
+        } catch (\Exception $e) {
+            Alert::error('Gagal', 'Terjadi kesalahan: '.$e->getMessage());
+
+            return back();
+        }
+    }
+
+    /**
+     * Toggle student active status.
+     */
+    public function toggleActive(Student $student)
+    {
+        try {
+            if ($student->user->is_active) {
+                $this->studentService->deactivate($student);
+                $status = 'dinonaktifkan';
+            } else {
+                $this->studentService->activate($student);
+                $status = 'diaktifkan';
+            }
+
+            Alert::success('Berhasil', "Akun siswa {$student->user->name} berhasil {$status}.");
+
+            return back();
+        } catch (\Exception $e) {
+            Alert::error('Gagal', 'Terjadi kesalahan: '.$e->getMessage());
+
+            return back();
+        }
+    }
+
+    /**
+     * Unregister student device.
+     */
+    public function unregisterDevice(Student $student)
+    {
+        try {
+            $this->studentService->unregisterDevice($student);
+
+            Alert::success('Berhasil', "Perangkat siswa {$student->user->name} berhasil dihapus.");
+
+            return back();
+        } catch (\Exception $e) {
+            Alert::error('Gagal', 'Terjadi kesalahan: '.$e->getMessage());
+
+            return back();
+        }
+    }
+
+    /**
+     * Show active devices page.
+     */
+    public function activeDevices()
+    {
+        $students = Student::with(['user', 'classroom'])
+            ->whereNotNull('active_device_id')
+            ->orderBy('device_registered_at', 'desc')
+            ->get();
+
+        return view('users.students.devices', compact('students'));
+    }
+
+    /**
+     * Export students to Excel.
+     */
+    public function export(Request $request)
+    {
+        $classroomId = $request->input('classroom_id');
+
+        return Excel::download(new StudentExport($classroomId), 'students-'.date('Y-m-d').'.xlsx');
     }
 }

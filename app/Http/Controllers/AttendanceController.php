@@ -2,354 +2,234 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AttendanceStatus;
 use App\Exports\AttendanceExport;
-use App\Helper;
-use App\Http\Requests\UpdateAttendanceRequest;
 use App\Models\Attendance;
-use App\Models\Grade;
+use App\Models\Classroom;
 use App\Models\Student;
+use App\Services\AttendanceService;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
+use RealRashid\SweetAlert\Facades\Alert;
 
 class AttendanceController extends Controller
 {
+    public function __construct(
+        private AttendanceService $attendanceService
+    ) {}
+
     /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
+     * Display a listing of attendances.
      */
-    public function index()
+    public function index(Request $request)
     {
-        Helper::addHistory('/admin/attendances', 'Absensi');
+        $query = Attendance::with(['student.user', 'student.classroom']);
 
-        $attendances = Attendance::latest();
-
-        if (request('grade')) {
-            $grade = Grade::where('slug', request('grade'))->first();
-            $grade = $grade->id;
-            $students = Student::where('grade_id', $grade)->pluck('id');
-
-            $attendances->whereIn('student_id', $students);
+        // Filter by date range
+        if ($request->filled('start_date')) {
+            $query->whereDate('date', '>=', $request->start_date);
+        }
+        if ($request->filled('end_date')) {
+            $query->whereDate('date', '<=', $request->end_date);
         }
 
-        if (request('nisn')) {
-            $student = Student::where('nisn', request('nisn'))->first();
-            if ($student != null) {
-                $student = $student->id;
-            } else {
-                $student = 0;
-            }
-
-            $attendances->where('student_id', $student);
+        // Filter by classroom
+        if ($request->filled('classroom_id')) {
+            $query->whereHas('student', function ($q) use ($request) {
+                $q->where('classroom_id', $request->classroom_id);
+            });
         }
 
-        if (request('date')) {
-            $attendances->where('present_date', request('date'));
-        } else {
-            $attendances->where('present_date', date('Y-m-d'));
+        // Filter by status
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
         }
 
-        if (request('desc')) {
-            $attendances->where('desc', request('desc'));
+        // Search by student name or NISN
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->whereHas('student', function ($q) use ($search) {
+                $q->where('nisn', 'like', "%{$search}%")
+                    ->orWhereHas('user', function ($q2) use ($search) {
+                        $q2->where('name', 'like', "%{$search}%");
+                    });
+            });
         }
 
-        $data = [
-            'title' => 'Semua Data Absensi',
-            'attendances' => $attendances->with('student')->limit(1000)->get(),
-            'grades' => Grade::orderBy('name', 'ASC')->get(),
-        ];
+        $attendances = $query->latest('date')
+            ->latest('check_in')
+            ->get();
 
-        return view('attendance.index', $data);
-    }
+        $classrooms = Classroom::orderBy('grade_level')
+            ->orderBy('major')
+            ->orderBy('class_number')
+            ->get();
 
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    // public function create()
-    // {
-    //     $alreadyAbsents = Attendance::where('desc', '!=', 'alpha')->pluck('student_id');
-    //     $studentCount = Student::count();
+        $statuses = AttendanceStatus::cases();
 
-    //     $data = [
-    //         'title' => 'Tambah Data Absensi',
-    //         'grades' => Grade::latest()->get()
-    //     ];
-
-    //     if ($alreadyAbsents->count() == $studentCount) {
-    //         $data['students'] = Student::where('id', 0)->get();
-    //     } else {
-    //         $students = Student::latest();
-    //         foreach ($alreadyAbsents as $alreadyAbsent) {
-    //             $students->where('id', "!=", $alreadyAbsent)->get();
-    //         }
-    //         $data['students'] = $students->get();
-    //     }
-
-    //     return view('attendance.create', $data);
-    // }
-
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @param  \App\Http\Requests\StoreAttendanceRequest  $request
-     * @return \Illuminate\Http\Response
-     */
-    // public function store(StoreAttendanceRequest $request)
-    // {
-    //     $validatedData = $request->validate([
-    //         'student_id' => 'required',
-    //         'desc' => 'required'
-    //     ]);
-
-    //     $id = Attendance::where('student_id', $request->student_id)->where('present_date', date("Y-m-d"))->first();
-    //     $id = $id->id;
-
-    //     $validatedData['present_date'] = date("Y-m-d");
-
-    //     Attendance::where('id', $id)->update($validatedData);
-
-    //     return redirect('/admin/attendances')->with('success', 'Data Absensi Baru Berhasil Ditambahkan');
-    // }
-
-    /**
-     * Display the specified resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function show(Attendance $attendance)
-    {
-        //
+        return view('attendances.index', compact('attendances', 'classrooms', 'statuses'));
     }
 
     /**
-     * Show the form for editing the specified resource.
-     *
-     * @return \Illuminate\Http\Response
+     * Display attendance recap by date range.
      */
-    public function edit(Attendance $attendance)
+    public function recap(Request $request)
     {
-        Helper::addHistory('/admin/attendances/'.$attendance->id.'/edit', 'Ubah Rekap Absensi');
+        $startDate = $request->filled('start_date')
+            ? Carbon::parse($request->start_date)
+            : Carbon::now()->startOfMonth();
 
-        $data = [
-            'title' => 'Tambah Data Absensi',
-            'attendance' => $attendance,
-        ];
+        $endDate = $request->filled('end_date')
+            ? Carbon::parse($request->end_date)
+            : Carbon::now()->endOfMonth();
 
-        return view('attendance.edit', $data);
-    }
+        $classroomId = $request->classroom_id;
 
-    /**
-     * Update the specified resource in storage.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function update(UpdateAttendanceRequest $request, Attendance $attendance)
-    {
-        $validatedData = $request->validate([
-            'student_id' => 'required',
-            'desc' => 'required',
-        ]);
+        $students = Student::with(['user', 'classroom'])
+            ->when($classroomId, fn ($q) => $q->where('classroom_id', $classroomId))
+            ->orderBy('classroom_id')
+            ->get();
 
-        $id = Attendance::where('student_id', $request->student_id)->where('present_date', date('Y-m-d'))->first();
-        $id = $id->id;
-
-        $validatedData['present_date'] = date('Y-m-d');
-
-        Attendance::where('id', $id)->update($validatedData);
-
-        return redirect('/admin/attendances')->with('success', 'Data Absensi Baru Berhasil Diupdate');
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy(Attendance $attendance)
-    {
-        // Attendance::destroy($attendance->id);
-
-        // return redirect('/admin/attendances')->with('success', 'Data Absensi Berhasil Dihapus');
-    }
-
-    public function rekapIndex()
-    {
-        Helper::addHistory('/admin/attendances/rekap', 'Rekap Siswa');
-
-        $students = Student::latest();
-
-        if (request('grade')) {
-            $grade = Grade::where('slug', request('grade'))->first();
-            if ($grade != null) {
-                $grade = $grade->id;
-            } else {
-                $grade = 0;
-            }
-
-            $students->where('student_id', $grade);
-        }
-
-        if (request('nisn')) {
-            $students->where('nisn', request('nisn'));
-        }
-
-        $data = [
-            'title' => 'Semua Rekap Siswa',
-            'students' => $students->get(),
-            'grades' => Grade::orderBy('name', 'ASC')->get(),
-        ];
-
-        return view('attendance.rekap', $data);
-    }
-
-    public function rekapShow($nisn)
-    {
-        Helper::addHistory('/admin/attendances/rekap/'.$nisn, 'Detail Rekap Siswa');
-
-        $student = Student::where('nisn', $nisn)->first();
-        $studentId = $student->id;
-
-        $attendances = Attendance::where('student_id', $studentId);
-
-        if (request('month')) {
-            $attendances->whereRaw('MONTH(present_date)='.request('month'));
-        } else {
-            $attendances->whereRaw('MONTH(present_date)='.date('m'));
-        }
-
-        if (request('year')) {
-            $attendances->whereRaw('YEAR(present_date)='.request('year'));
-        } else {
-            $attendances->whereRaw('YEAR(present_date)='.date('Y'));
-        }
-
-        $masuk = $attendances->clone();
-        $terlambat = $attendances->clone();
-        $sakit = $attendances->clone();
-        $ijin = $attendances->clone();
-        $alpha = $attendances->clone();
-
-        $data = [
-            'title' => 'Detail Rekap '.$student->name,
-            'name' => $student->name,
-            'attendances' => $attendances->limit(1000)->get(),
-            'nisn' => $nisn,
-            'masuk' => $masuk->where('desc', 'masuk')->count(),
-            'bolos' => $masuk->where('desc', 'masuk (bolos)')->count(),
-            'terlambat' => $terlambat->where('desc', 'terlambat')->count(),
-            'sakit' => $sakit->where('desc', 'sakit')->count(),
-            'ijin' => $ijin->where('desc', 'ijin')->count(),
-            'alpha' => $alpha->where('desc', 'alpha')->count(),
-            'months' => Attendance::selectRaw('EXTRACT(MONTH FROM present_date) as month')->distinct()->orderBy('month', 'ASC')->get(),
-            'years' => Attendance::selectRaw('EXTRACT(YEAR FROM present_date) as year')->distinct()->orderBy('year', 'ASC')->get(),
-        ];
-
-        return view('attendance.showRekap', $data);
-    }
-
-    public function rekapGradeIndex()
-    {
-        Helper::addHistory('/admin/attendances/grade-rekap', 'Rekap Kelas');
-
-        $data = [
-            'title' => 'Semua Rekap Kelas',
-            'grades' => Grade::orderBy('name', 'ASC')->get(),
-        ];
-
-        return view('attendance.gradeRekap', $data);
-    }
-
-    public function rekapGradeShow($slug)
-    {
-        Helper::addHistory('/admin/attendances/grade-rekap', 'Detail Rekap Kelas');
-
-        $grade = Grade::where('slug', $slug)->first();
-        $studentId = Student::where('grade_id', $grade->id)->pluck('id');
-
-        $attendances = Attendance::whereIn('student_id', $studentId);
-
-        if (request('month')) {
-            $attendances->whereRaw('MONTH(present_date)='.request('month'));
-        } else {
-            $attendances->whereRaw('MONTH(present_date)='.date('m'));
-        }
-
-        if (request('year')) {
-            $attendances->whereRaw('YEAR(present_date)='.request('year'));
-        } else {
-            $attendances->whereRaw('YEAR(present_date)='.date('Y'));
-        }
-
-        $days = [];
-        if (request('month')) {
-            $days = Attendance::selectRaw('EXTRACT(DAY FROM present_date) as day')
-                ->whereRaw('MONTH(present_date)='.request('month'))
-                ->whereIn('student_id', $studentId)
-                ->distinct()
-                ->orderBy('day', 'ASC')
+        $recap = [];
+        foreach ($students as $student) {
+            $attendances = Attendance::where('student_id', $student->id)
+                ->whereBetween('date', [$startDate, $endDate])
                 ->get();
-        } else {
-            $days = Attendance::selectRaw('EXTRACT(DAY FROM present_date) as day')
-                ->whereRaw('MONTH(present_date)='.date('m'))
-                ->whereIn('student_id', $studentId)
-                ->distinct()
-                ->orderBy('day', 'ASC')
-                ->get();
-        }
-        $data = [];
-        foreach ($days as $day) {
-            $masuk = $attendances->clone();
-            $masuk->where('desc', 'masuk')->whereRaw('DAY(present_date)='.$day->day);
 
-            $terlambat = $attendances->clone();
-            $terlambat->where('desc', 'terlambat')->whereRaw('DAY(present_date)='.$day->day);
-
-            $sakit = $attendances->clone();
-            $sakit->where('desc', 'sakit')->whereRaw('DAY(present_date)='.$day->day);
-
-            $ijin = $attendances->clone();
-            $ijin->where('desc', 'ijin')->whereRaw('DAY(present_date)='.$day->day);
-
-            $alpha = $attendances->clone();
-            $alpha->where('desc', 'alpha')->whereRaw('DAY(present_date)='.$day->day);
-
-            $bolos = $attendances->clone();
-            $bolos->where('desc', 'masuk (bolos)')->whereRaw('DAY(present_date)='.$day->day);
-
-            $data[] = [
-                'tanggal' => $day->day,
-                'masuk' => $masuk->count(),
-                'terlambat' => $terlambat->count(),
-                'sakit' => $sakit->count(),
-                'ijin' => $ijin->count(),
-                'alpha' => $alpha->count(),
-                'bolos' => $bolos->count(),
+            $recap[] = [
+                'student' => $student,
+                'present' => $attendances->where('status', AttendanceStatus::PRESENT)->count(),
+                'late' => $attendances->where('status', AttendanceStatus::LATE)->count(),
+                'sick' => $attendances->where('status', AttendanceStatus::SICK)->count(),
+                'permission' => $attendances->where('status', AttendanceStatus::PERMISSION)->count(),
+                'absent' => $attendances->where('status', AttendanceStatus::ABSENT)->count(),
+                'total' => $attendances->count(),
             ];
         }
 
-        $data = [
-            'title' => 'Detail Rekap '.$grade->name,
-            'name' => $grade->name,
-            'data' => $data,
-            'slug' => $slug,
-            'studentCount' => Student::whereIn('grade_id', $grade)->count(),
-            'months' => Attendance::selectRaw('EXTRACT(MONTH FROM present_date) as month')->distinct()->orderBy('month', 'ASC')->get(),
-            'years' => Attendance::selectRaw('EXTRACT(YEAR FROM present_date) as year')->distinct()->orderBy('year', 'ASC')->get(),
-        ];
+        $classrooms = Classroom::orderBy('grade_level')
+            ->orderBy('major')
+            ->orderBy('class_number')
+            ->get();
 
-        return view('attendance.gradeRekapShow', $data);
+        return view('attendances.recap', compact('recap', 'classrooms', 'startDate', 'endDate'));
     }
 
-    public function exportExcel()
+    /**
+     * Display the specified attendance.
+     */
+    public function show(Attendance $attendance)
     {
-        if (! request('grade') || ! request('date')) {
-            return redirect()->back();
+        $attendance->load(['student.user', 'student.classroom']);
+
+        return view('attendances.show', compact('attendance'));
+    }
+
+    /**
+     * Show the form for editing the specified attendance.
+     */
+    public function edit(Attendance $attendance)
+    {
+        $attendance->load(['student.user', 'student.classroom']);
+        $statuses = AttendanceStatus::cases();
+
+        return view('attendances.edit', compact('attendance', 'statuses'));
+    }
+
+    /**
+     * Update the specified attendance.
+     */
+    public function update(Request $request, Attendance $attendance)
+    {
+        $request->validate([
+            'status' => 'required|in:'.implode(',', array_column(AttendanceStatus::cases(), 'value')),
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        try {
+            $this->attendanceService->updateStatus($attendance, $request->status, $request->notes);
+
+            Alert::success('Berhasil', 'Data presensi berhasil diperbarui.');
+
+            return redirect()->route('dashboard.attendances.index');
+        } catch (\Exception $e) {
+            Alert::error('Gagal', 'Terjadi kesalahan: '.$e->getMessage());
+
+            return back()->withInput();
         }
+    }
 
-        $grade = Grade::where('slug', request('grade'))->first();
-        $fileName = "Rekap Kelas $grade->name | ".request('date').'.xlsx';
+    /**
+     * Remove the specified attendance.
+     */
+    public function destroy(Attendance $attendance)
+    {
+        try {
+            $attendance->delete();
 
-        return Excel::download(new AttendanceExport(request('grade'), request('date')), $fileName);
+            Alert::success('Berhasil', 'Data presensi berhasil dihapus.');
+
+            return redirect()->route('dashboard.attendances.index');
+        } catch (\Exception $e) {
+            Alert::error('Gagal', 'Terjadi kesalahan: '.$e->getMessage());
+
+            return back();
+        }
+    }
+
+    /**
+     * Export attendances to Excel.
+     */
+    public function export(Request $request)
+    {
+        $startDate = $request->start_date;
+        $endDate = $request->end_date;
+        $classroomId = $request->classroom_id;
+
+        return Excel::download(
+            new AttendanceExport($startDate, $endDate, $classroomId),
+            'attendances-'.date('Y-m-d').'.xlsx'
+        );
+    }
+
+    /**
+     * Show recap by student.
+     */
+    public function recapStudent(Request $request)
+    {
+        $students = Student::with('classroom')->get();
+        $startDate = $request->start_date ?? date('Y-m-01');
+        $endDate = $request->end_date ?? date('Y-m-t');
+
+        return view('attendances.recap-student', compact('students', 'startDate', 'endDate'));
+    }
+
+    /**
+     * Show recap by classroom.
+     */
+    public function recapClassroom(Request $request)
+    {
+        $classrooms = Classroom::with('students')->get();
+        $startDate = $request->start_date ?? date('Y-m-01');
+        $endDate = $request->end_date ?? date('Y-m-t');
+
+        return view('attendances.recap-classroom', compact('classrooms', 'startDate', 'endDate'));
+    }
+
+    /**
+     * Show overall recap.
+     */
+    public function recapOverall(Request $request)
+    {
+        $startDate = $request->start_date ?? date('Y-m-01');
+        $endDate = $request->end_date ?? date('Y-m-t');
+
+        $stats = Attendance::whereBetween('date', [$startDate, $endDate])
+            ->selectRaw('status, count(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        return view('attendances.recap-overall', compact('stats', 'startDate', 'endDate'));
     }
 }

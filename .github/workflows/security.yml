@@ -1,0 +1,55 @@
+name: Security Scan
+
+on:
+    push:
+        branches: ["main", "develop"]
+    pull_request:
+        branches: ["main", "develop"]
+    schedule:
+        - cron: "0 0 * * 1" # Weekly on Monday
+
+permissions:
+    contents: read
+    security-events: write
+
+jobs:
+    security-scan:
+        name: Security Vulnerability Scan
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup PHP
+              uses: shivammathur/setup-php@v2
+              with:
+                  php-version: "8.2"
+                  tools: composer:v2
+
+            - name: Install dependencies
+              run: composer install --prefer-dist --no-interaction
+
+            - name: Run composer audit
+              run: composer audit --format=json --locked > composer-audit.json || true
+
+            - name: Upload audit results
+              if: always()
+              uses: actions/upload-artifact@v3
+              with:
+                  name: composer-audit
+                  path: composer-audit.json
+
+            - name: Run Trivy vulnerability scanner
+              uses: aquasecurity/trivy-action@master
+              with:
+                  scan-type: "fs"
+                  scan-ref: "."
+                  format: "sarif"
+                  output: "trivy-results.sarif"
+
+            - name: Upload Trivy results to GitHub Security
+              uses: github/codeql-action/upload-sarif@v2
+              if: always()
+              with:
+                  sarif_file: "trivy-results.sarif"

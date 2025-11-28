@@ -3,145 +3,196 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Grade;
+use App\Http\Requests\Auth\StudentLoginRequest;
 use App\Models\Student;
+use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
 
 class AuthController extends Controller
 {
-    public function login(Request $request)
+    /**
+     * Student login with device management.
+     * Only one device can be logged in at a time per student.
+     */
+    public function login(StudentLoginRequest $request): JsonResponse
     {
-        $validate = Validator::make($request->all(), [
-            'nis' => 'required',
-            'password' => 'required',
-        ]);
-        if ($validate->fails()) {
-            $data = [
-                'message' => 'Validasi Gagal',
-                'error' => $validate->errors(),
+        $identifier = $request->input('identifier'); // NISN or NIS
+        $password = $request->input('password');
+        $deviceId = $request->input('device_id');
+
+        // Find student by NISN or NIS
+        $student = Student::where('nisn', $identifier)
+            ->orWhere('nis', $identifier)
+            ->with(['user', 'classroom'])
+            ->first();
+
+        if (! $student) {
+            return response()->json([
+                'message' => 'NISN/NIS tidak ditemukan.',
+                'errors' => null,
                 'data' => null,
-            ];
-
-            return response()->json($data, 402);
-        } else {
-            $credential = request(['nis', 'password']);
-
-            if (Auth::guard('student')->attempt($credential)) {
-                $studentResponse = Student::where('nis', $request->nis)
-                    ->select('id', 'nisn', 'nis', 'name', 'date_of_birth', 'gender', 'address', 'grade_id as grade', 'entry_year', 'profile_pic')
-                    ->first();
-                $studentStatus = Student::where('nis', $request->nis)
-                    ->select('already_login')
-                    ->first();
-
-                if ($studentStatus->already_login == true) {
-                    $data = [
-                        'message' => 'Akun Sudah Digunakan Di Perangkat Lain',
-                        'errors' => null,
-                        'data' => null,
-                    ];
-
-                    return response()->json($data, 401);
-                }
-
-                $grade = Student::where('nis', $request->nis)->select('grade_id')->first();
-                $grade = Grade::where('id', $grade->grade_id)->first();
-                $studentResponse->grade = $grade->name;
-
-                Student::where('id', $studentResponse->id)->update([
-                    'already_login' => true,
-                ]);
-
-                $token = $studentResponse->createToken('token')->plainTextToken;
-
-                $data = [
-                    'message' => 'Login Berhasil',
-                    'errors' => null,
-                    'data' => [
-                        'student' => $studentResponse,
-                        'access_token' => $token,
-                        'token_type' => 'Bearer',
-                    ],
-                ];
-
-                return response()->json($data, 200);
-            } else {
-                $data = [
-                    'message' => 'NIS atau Password Salah',
-                    'errors' => null,
-                    'data' => null,
-                ];
-
-                return response()->json($data, 401);
-            }
+            ], 404);
         }
-    }
 
-    public function logout(Request $request)
-    {
-        // Student::where('id', auth('sanctum')->user()->id)->update([
-        //     'already_login' => false
-        // ]);
-        // Auth::guard('student')->tokens()->where('id', $user->currentAccessToken()->id)->delete();
-        $request->user()->currentAccessToken()->delete();
-        // Auth::guard('student')->user()->tokens()->delete();
-        $data = [
-            'message' => 'Logout Berhasil',
-            'errors' => null,
-            'data' => null,
+        // Check if user account is active
+        if (! $student->user->is_active) {
+            return response()->json([
+                'message' => 'Akun Anda tidak aktif. Hubungi administrator.',
+                'errors' => null,
+                'data' => null,
+            ], 403);
+        }
+
+        // Verify password using the unified User model
+        if (! Hash::check($password, $student->user->password)) {
+            return response()->json([
+                'message' => 'Password salah.',
+                'errors' => null,
+                'data' => null,
+            ], 401);
+        }
+
+        // Check if device is already registered to this student
+        if ($student->isDeviceRegistered($deviceId)) {
+            // Same device, allow login
+            $user = $student->user;
+        } elseif ($student->active_device_id) {
+            // Different device, reject login
+            return response()->json([
+                'message' => 'Akun sudah digunakan di perangkat lain. Silakan logout dari perangkat tersebut terlebih dahulu.',
+                'errors' => null,
+                'data' => null,
+            ], 409);
+        } else {
+            // No device registered yet, register this device
+            $student->registerDevice($deviceId);
+            $user = $student->user;
+        }
+
+        // Generate Sanctum token
+        $token = $user->createToken('mobile-app-'.$deviceId)->plainTextToken;
+
+        // Prepare student response
+        $studentData = [
+            'id' => $student->id,
+            'user_id' => $student->user_id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'nisn' => $student->nisn,
+            'nis' => $student->nis,
+            'date_of_birth' => $student->date_of_birth,
+            'gender' => $student->gender,
+            'phone' => $student->phone,
+            'address' => $student->address,
+            'classroom' => [
+                'id' => $student->classroom->id,
+                'name' => $student->classroom->name,
+                'grade_level' => $student->classroom->grade_level,
+                'major' => $student->classroom->major,
+            ],
+            'entry_year' => $student->entry_year,
+            'profile_picture' => $user->profile_picture,
         ];
 
-        return response()->json($data, 200);
+        return response()->json([
+            'message' => 'Login berhasil.',
+            'errors' => null,
+            'data' => [
+                'student' => $studentData,
+                'access_token' => $token,
+                'token_type' => 'Bearer',
+            ],
+        ], 200);
     }
 
-    // public function edit(Request $request, $id)
-    // {
-    //     $validate = Validator::make($request->all(), [
-    //         'name'      => 'required',
-    //         'email'      => 'required|email',
-    //         'username'  => 'required',
-    //         'password'  => 'required',
-    //     ]);
+    /**
+     * Student logout and unregister device.
+     */
+    public function logout(Request $request): JsonResponse
+    {
+        $user = $request->user();
 
-    //     if ($validate->fails()) {
-    //         $data = [
-    //             'success'    => false,
-    //             'msg'       => 'Validation error',
-    //             'errors'    => $validate->errors(),
-    //             'data'      => null
-    //         ];
+        if (! $user) {
+            return response()->json([
+                'message' => 'Unauthorized.',
+                'errors' => null,
+                'data' => null,
+            ], 401);
+        }
 
-    //         return response()->json($data, 422);
-    //     } else {
-    //         $user = User::where('id', $id)->update([
-    //             'name' => $request['name'],
-    //             'email' => $request['email'],
-    //             'username' => $request['username'],
-    //             'password' => Hash::make($request['password']),
-    //         ]);
+        // Find student and unregister device
+        $student = Student::where('user_id', $user->id)->first();
+        if ($student) {
+            $student->unregisterDevice();
+        }
 
-    //         if ($user) {
-    //             $data = [
-    //                 'success'    => true,
-    //                 'msg'       => 'Edit Admin Berhasil',
-    //                 'errors'    => null,
-    //                 'data'      => null
-    //             ];
+        // Revoke current access token
+        $request->user()->currentAccessToken()->delete();
 
-    //             return response()->json($data, 200);
-    //         } else {
-    //             $data = [
-    //                 'success'    => false,
-    //                 'msg'       => 'Edit Admin Gagal',
-    //                 'errors'    => null,
-    //                 'data'      => null
-    //             ];
+        return response()->json([
+            'message' => 'Logout berhasil.',
+            'errors' => null,
+            'data' => null,
+        ], 200);
+    }
 
-    //             return response()->json($data, 200);
-    //         }
-    //     }
-    // }
+    /**
+     * Get authenticated student profile.
+     */
+    public function profile(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (! $user) {
+            return response()->json([
+                'message' => 'Unauthorized.',
+                'errors' => null,
+                'data' => null,
+            ], 401);
+        }
+
+        $student = Student::where('user_id', $user->id)
+            ->with(['classroom', 'user'])
+            ->first();
+
+        if (! $student) {
+            return response()->json([
+                'message' => 'Data siswa tidak ditemukan.',
+                'errors' => null,
+                'data' => null,
+            ], 404);
+        }
+
+        $studentData = [
+            'id' => $student->id,
+            'user_id' => $student->user_id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'nisn' => $student->nisn,
+            'nis' => $student->nis,
+            'date_of_birth' => $student->date_of_birth,
+            'gender' => $student->gender,
+            'phone' => $student->phone,
+            'address' => $student->address,
+            'classroom' => [
+                'id' => $student->classroom->id,
+                'name' => $student->classroom->name,
+                'grade_level' => $student->classroom->grade_level,
+                'major' => $student->classroom->major,
+            ],
+            'entry_year' => $student->entry_year,
+            'parent_name' => $student->parent_name,
+            'parent_phone' => $student->parent_phone,
+            'profile_picture' => $user->profile_picture,
+            'is_device_registered' => ! empty($student->active_device_id),
+        ];
+
+        return response()->json([
+            'message' => 'Profil berhasil diambil.',
+            'errors' => null,
+            'data' => $studentData,
+        ], 200);
+    }
 }

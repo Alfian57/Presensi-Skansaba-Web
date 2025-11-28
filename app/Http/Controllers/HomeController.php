@@ -67,6 +67,6 @@ class HomeController extends Controller
             'gradeCount' => Grade::count(),
         ];
 
-        return view('home.index', $data);
+        return view('dashboard.index', $data);
     }
 }

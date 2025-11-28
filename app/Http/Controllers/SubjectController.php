@@ -2,129 +2,137 @@
 
 namespace App\Http\Controllers;
 
-use App\Helper;
-use App\Http\Requests\StoreSubjectRequest;
-use App\Http\Requests\UpdateSubjectRequest;
 use App\Models\Subject;
-use Illuminate\Support\Str;
+use Illuminate\Http\Request;
+use RealRashid\SweetAlert\Facades\Alert;
 
 class SubjectController extends Controller
 {
     /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
+     * Display a listing of subjects.
      */
-    public function index()
+    public function index(Request $request)
     {
-        Helper::addHistory('/admin/subjects/', 'Mata Pelajaran');
+        $query = Subject::query();
 
-        $subjects = Subject::latest();
+        // Search by name or code
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('code', 'like', "%{$search}%");
+            });
+        }
 
-        // if (request('search')) {
-        //     $subjects->where('name', 'like', '%' . $_GET['search'] . "%");
-        // }
+        $subjects = $query->orderBy('name')->paginate(20);
 
-        $data = [
-            'title' => 'Semua Mata Pelajaran',
-            'subjects' => $subjects->get(),
-        ];
-
-        return view('subject.index', $data);
+        return view('master-data.subjects.index', compact('subjects'));
     }
 
     /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
+     * Show the form for creating a new subject.
      */
     public function create()
     {
-        Helper::addHistory('/admin/subjects/create', 'Tambah Mata Pelajaran');
-
-        $data = [
-            'title' => 'Tambah Mata Pelajaran',
-        ];
-
-        return view('subject.create', $data);
+        return view('master-data.subjects.create');
     }
 
     /**
-     * Store a newly created resource in storage.
-     *
-     * @return \Illuminate\Http\Response
+     * Store a newly created subject.
      */
-    public function store(StoreSubjectRequest $request)
+    public function store(Request $request)
     {
-        $validatedData = $request->validate([
-            'name' => 'required|unique:subjects|max:255',
+        $request->validate([
+            'code' => 'required|string|max:20|unique:subjects,code',
+            'name' => 'required|string|max:100',
+            'description' => 'nullable|string|max:500',
+        ], [
+            'code.required' => 'Kode mata pelajaran wajib diisi.',
+            'code.unique' => 'Kode mata pelajaran sudah digunakan.',
+            'name.required' => 'Nama mata pelajaran wajib diisi.',
         ]);
 
-        $validatedData['slug'] = Str::slug($request->name);
+        try {
+            Subject::create($request->only(['code', 'name', 'description']));
 
-        Subject::create($validatedData);
+            Alert::success('Berhasil', 'Mata pelajaran berhasil ditambahkan.');
 
-        return redirect('/admin/subjects')->with('success', 'Mata Pelajaran Baru Berhasil Ditambahkan');
+            return redirect()->route('dashboard.subjects.index');
+        } catch (\Exception $e) {
+            Alert::error('Gagal', 'Terjadi kesalahan: '.$e->getMessage());
+
+            return back()->withInput();
+        }
     }
 
     /**
-     * Display the specified resource.
-     *
-     * @return \Illuminate\Http\Response
+     * Display the specified subject.
      */
     public function show(Subject $subject)
     {
-        //
+        $subject->load(['schedules.classroom', 'schedules.teacher.user']);
+
+        return view('master-data.subjects.show', compact('subject'));
     }
 
     /**
-     * Show the form for editing the specified resource.
-     *
-     * @return \Illuminate\Http\Response
+     * Show the form for editing the specified subject.
      */
     public function edit(Subject $subject)
     {
-        Helper::addHistory('/admin/subjects/'.$subject->slug.'/edit', 'Ubah Mata Pelajaran');
-
-        $data = [
-            'title' => 'Edit Data Mata Pelajaran',
-            'subject' => $subject,
-        ];
-
-        return view('subject.edit', $data);
+        return view('master-data.subjects.edit', compact('subject'));
     }
 
     /**
-     * Update the specified resource in storage.
-     *
-     * @return \Illuminate\Http\Response
+     * Update the specified subject.
      */
-    public function update(UpdateSubjectRequest $request, Subject $subject)
+    public function update(Request $request, Subject $subject)
     {
-        if ($request->oldName === $request->name) {
-            return back()->with('nameError', 'Data Not Changed');
-        } else {
-            $validatedData = $request->validate([
-                'name' => 'required|max:255|unique:subjects',
-            ]);
+        $request->validate([
+            'code' => 'required|string|max:20|unique:subjects,code,'.$subject->id,
+            'name' => 'required|string|max:100',
+            'description' => 'nullable|string|max:500',
+        ], [
+            'code.required' => 'Kode mata pelajaran wajib diisi.',
+            'code.unique' => 'Kode mata pelajaran sudah digunakan.',
+            'name.required' => 'Nama mata pelajaran wajib diisi.',
+        ]);
 
-            $validatedData['slug'] = Str::slug($request->name);
+        try {
+            $subject->update($request->only(['code', 'name', 'description']));
 
-            Subject::where('id', $subject->id)->update($validatedData);
+            Alert::success('Berhasil', 'Mata pelajaran berhasil diperbarui.');
+
+            return redirect()->route('dashboard.subjects.index');
+        } catch (\Exception $e) {
+            Alert::error('Gagal', 'Terjadi kesalahan: '.$e->getMessage());
+
+            return back()->withInput();
         }
-
-        return redirect('/admin/subjects')->with('success', 'Data Kelas Berhasil Diperbarui');
     }
 
     /**
-     * Remove the specified resource from storage.
-     *
-     * @return \Illuminate\Http\Response
+     * Remove the specified subject.
      */
     public function destroy(Subject $subject)
     {
-        Subject::destroy($subject->id);
+        try {
+            // Check if subject has schedules
+            if ($subject->schedules()->count() > 0) {
+                Alert::warning('Gagal', 'Mata pelajaran tidak dapat dihapus karena masih digunakan dalam jadwal.');
 
-        return redirect('/admin/subjects')->with('success', 'Mata Pelajaran '.$subject->name.' Berhasil Dihapus');
+                return back();
+            }
+
+            $subject->delete();
+
+            Alert::success('Berhasil', 'Mata pelajaran berhasil dihapus.');
+
+            return redirect()->route('dashboard.subjects.index');
+        } catch (\Exception $e) {
+            Alert::error('Gagal', 'Terjadi kesalahan: '.$e->getMessage());
+
+            return back();
+        }
     }
 }

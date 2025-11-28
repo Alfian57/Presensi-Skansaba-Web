@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
-use App\Models\Grade;
-use App\Models\OtherData;
+use App\Models\AttendanceConfig;
+use App\Models\Classroom;
 use App\Models\Student;
 use Carbon\Carbon;
 use Exception;
@@ -34,24 +34,24 @@ class PresentController extends Controller
         }
         // Validasi (End)
 
-        $waktuMulai = OtherData::where('name', 'Waktu Absen Mulai')->first();
+        $waktuMulai = AttendanceConfig::where('name', 'Waktu Absen Mulai')->first();
         $waktuMulai = $waktuMulai->value;
 
-        $waktuBerakhir = OtherData::where('name', 'Waktu Absen Berakhir')->first();
+        $waktuBerakhir = AttendanceConfig::where('name', 'Waktu Absen Berakhir')->first();
         $waktuBerakhir = $waktuBerakhir->value;
 
-        $waktuTerlambat = OtherData::where('name', 'Waktu Absen Terlambat')->first();
+        $waktuTerlambat = AttendanceConfig::where('name', 'Waktu Absen Terlambat')->first();
         $waktuTerlambat = $waktuTerlambat->value;
 
-        $waktuPulang = OtherData::where('name', 'Waktu Pulang Mulai')->first();
+        $waktuPulang = AttendanceConfig::where('name', 'Waktu Pulang Mulai')->first();
         $waktuPulang = $waktuPulang->value;
 
         $now = Carbon::now();
         $now->setTimezone('Asia/Jakarta');
         $now = $now->toTimeString();
 
-        $keyMasuk = OtherData::where('name', 'QR Absensi Masuk')->first();
-        $keyPulang = OtherData::where('name', 'QR Absensi Pulang')->first();
+        $keyMasuk = AttendanceConfig::where('name', 'QR Absensi Masuk')->first();
+        $keyPulang = AttendanceConfig::where('name', 'QR Absensi Pulang')->first();
 
         try {
             if ($request->key == $keyMasuk->value) {
@@ -90,7 +90,7 @@ class PresentController extends Controller
                             ->select('id', 'nisn', 'nis', 'name', 'date_of_birth', 'gender', 'address', 'grade_id as grade', 'entry_year', 'profile_pic')
                             ->first();
 
-                        $grade = Grade::where('id', $studentResponse->grade)->first();
+                        $grade = Classroom::where('id', $studentResponse->grade)->first();
 
                         $studentResponse->grade = $grade->name;
 
@@ -174,7 +174,7 @@ class PresentController extends Controller
                             ->select('id', 'nisn', 'nis', 'name', 'date_of_birth', 'gender', 'address', 'grade_id as grade', 'entry_year', 'profile_pic')
                             ->first();
 
-                        $grade = Grade::where('id', $studentResponse->grade)->first();
+                        $grade = Classroom::where('id', $studentResponse->grade)->first();
 
                         $studentResponse->grade = $grade->name;
 
@@ -250,7 +250,7 @@ class PresentController extends Controller
 
     public function getAttendancesWithGrade($grade)
     {
-        $gradeResult = Grade::where('slug', $grade)->first();
+        $gradeResult = Classroom::where('slug', $grade)->first();
 
         $students = Student::where('grade_id', $gradeResult->id)->pluck('id');
 
@@ -300,7 +300,7 @@ class PresentController extends Controller
 
     public function getAttendancesHomeWithGrade($grade)
     {
-        $gradeResult = Grade::where('slug', $grade)->first();
+        $gradeResult = Classroom::where('slug', $grade)->first();
 
         $students = Student::where('grade_id', $gradeResult->id)->pluck('id');
 

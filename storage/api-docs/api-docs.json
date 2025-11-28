@@ -1,0 +1,557 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Presensi Skansaba API",
+        "description": "API Documentation for Presensi Skansaba - Student Attendance System",
+        "contact": {
+            "name": "Presensi Skansaba Support",
+            "email": "admin@skansaba.com"
+        },
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://my-default-host.com",
+            "description": "API Server"
+        }
+    ],
+    "paths": {
+        "/api/v1/auth/login": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Login to get access token",
+                "operationId": "a7997e7c1e3bfed64d4e56de82415931",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "login",
+                                    "password",
+                                    "device_name",
+                                    "device_id"
+                                ],
+                                "properties": {
+                                    "login": {
+                                        "type": "string",
+                                        "example": "siswa1"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "example": "password"
+                                    },
+                                    "device_name": {
+                                        "type": "string",
+                                        "example": "Samsung Galaxy S21"
+                                    },
+                                    "device_id": {
+                                        "type": "string",
+                                        "example": "abc123def456"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Login successful"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/logout": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Logout and revoke token",
+                "operationId": "f6b8957b4c0b25636613a9f0512a8ba9",
+                "responses": {
+                    "200": {
+                        "description": "Logout successful"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/auth/me": {
+            "get": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Get authenticated user profile",
+                "operationId": "37d33f0281f67d31d05b4c45eea0143b",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "404": {
+                        "description": "Student data not found"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "Student": {
+                "title": "Student",
+                "description": "Student model",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "user": {
+                        "$ref": "#/components/schemas/User"
+                    },
+                    "nisn": {
+                        "type": "string",
+                        "example": "1234567890"
+                    },
+                    "nis": {
+                        "type": "string",
+                        "example": "12345"
+                    },
+                    "gender": {
+                        "type": "string",
+                        "enum": [
+                            "male",
+                            "female"
+                        ],
+                        "example": "male"
+                    },
+                    "date_of_birth": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2005-01-15"
+                    },
+                    "phone": {
+                        "type": "string",
+                        "example": "081234567890"
+                    },
+                    "address": {
+                        "type": "string",
+                        "example": "Jl. Contoh No. 123"
+                    },
+                    "entry_year": {
+                        "type": "integer",
+                        "example": 2023
+                    },
+                    "classroom": {
+                        "$ref": "#/components/schemas/Classroom"
+                    },
+                    "parent_name": {
+                        "type": "string",
+                        "example": "Budi Santoso"
+                    },
+                    "parent_phone": {
+                        "type": "string",
+                        "example": "081234567891"
+                    },
+                    "has_active_device": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "device_registered_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2024-01-01T10:00:00Z"
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2024-01-01T00:00:00Z"
+                    }
+                },
+                "type": "object"
+            },
+            "User": {
+                "title": "User",
+                "description": "User model",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "John Doe"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "john@example.com"
+                    },
+                    "username": {
+                        "type": "string",
+                        "example": "johndoe"
+                    },
+                    "photo": {
+                        "type": "string",
+                        "example": "https://example.com/storage/profiles/photo.jpg",
+                        "nullable": true
+                    },
+                    "role": {
+                        "type": "string",
+                        "example": "student"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2024-01-01T00:00:00Z"
+                    }
+                },
+                "type": "object"
+            },
+            "Classroom": {
+                "title": "Classroom",
+                "description": "Classroom model",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "X IPA 1"
+                    },
+                    "grade_level": {
+                        "type": "integer",
+                        "example": 10
+                    },
+                    "major": {
+                        "type": "string",
+                        "enum": [
+                            "IPA",
+                            "IPS"
+                        ],
+                        "example": "IPA"
+                    },
+                    "class_number": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "academic_year": {
+                        "type": "string",
+                        "example": "2023/2024"
+                    },
+                    "students_count": {
+                        "type": "integer",
+                        "example": 30
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2024-01-01T00:00:00Z"
+                    }
+                },
+                "type": "object"
+            },
+            "Attendance": {
+                "title": "Attendance",
+                "description": "Attendance record",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "student": {
+                        "$ref": "#/components/schemas/Student"
+                    },
+                    "date": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2024-01-15"
+                    },
+                    "check_in": {
+                        "type": "string",
+                        "format": "time",
+                        "example": "07:30:00"
+                    },
+                    "check_out": {
+                        "type": "string",
+                        "format": "time",
+                        "example": "15:00:00",
+                        "nullable": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "present",
+                            "late",
+                            "sick",
+                            "permission",
+                            "absent"
+                        ],
+                        "example": "present"
+                    },
+                    "status_label": {
+                        "type": "string",
+                        "example": "Hadir"
+                    },
+                    "notes": {
+                        "type": "string",
+                        "example": "Tepat waktu",
+                        "nullable": true
+                    },
+                    "photo": {
+                        "type": "string",
+                        "example": "https://example.com/storage/attendances/photo.jpg",
+                        "nullable": true
+                    },
+                    "latitude": {
+                        "type": "number",
+                        "format": "float",
+                        "example": -6.2088,
+                        "nullable": true
+                    },
+                    "longitude": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 106.8456,
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2024-01-15T07:30:00Z"
+                    }
+                },
+                "type": "object"
+            },
+            "Schedule": {
+                "title": "Schedule",
+                "description": "Class schedule",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "classroom": {
+                        "$ref": "#/components/schemas/Classroom"
+                    },
+                    "subject": {
+                        "$ref": "#/components/schemas/Subject"
+                    },
+                    "teacher": {
+                        "$ref": "#/components/schemas/Teacher"
+                    },
+                    "day": {
+                        "type": "string",
+                        "enum": [
+                            "monday",
+                            "tuesday",
+                            "wednesday",
+                            "thursday",
+                            "friday",
+                            "saturday"
+                        ],
+                        "example": "monday"
+                    },
+                    "start_time": {
+                        "type": "string",
+                        "format": "time",
+                        "example": "08:00"
+                    },
+                    "end_time": {
+                        "type": "string",
+                        "format": "time",
+                        "example": "09:30"
+                    },
+                    "room": {
+                        "type": "string",
+                        "example": "Lab Komputer 1"
+                    },
+                    "academic_year": {
+                        "type": "string",
+                        "example": "2023/2024"
+                    },
+                    "semester": {
+                        "type": "integer",
+                        "enum": [
+                            1,
+                            2
+                        ],
+                        "example": 1
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2024-01-01T00:00:00Z"
+                    }
+                },
+                "type": "object"
+            },
+            "Subject": {
+                "title": "Subject",
+                "description": "Subject/Course",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "code": {
+                        "type": "string",
+                        "example": "MAT101"
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Matematika"
+                    },
+                    "description": {
+                        "type": "string",
+                        "example": "Mata pelajaran Matematika",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2024-01-01T00:00:00Z"
+                    }
+                },
+                "type": "object"
+            },
+            "Teacher": {
+                "title": "Teacher",
+                "description": "Teacher model",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "user": {
+                        "$ref": "#/components/schemas/User"
+                    },
+                    "employee_number": {
+                        "type": "string",
+                        "example": "198501012010011001"
+                    },
+                    "date_of_birth": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "1985-01-01"
+                    },
+                    "gender": {
+                        "type": "string",
+                        "enum": [
+                            "male",
+                            "female"
+                        ],
+                        "example": "male"
+                    },
+                    "phone": {
+                        "type": "string",
+                        "example": "081234567890"
+                    },
+                    "address": {
+                        "type": "string",
+                        "example": "Jl. Guru No. 1"
+                    },
+                    "hire_date": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2010-01-01"
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2024-01-01T00:00:00Z"
+                    }
+                },
+                "type": "object"
+            },
+            "ErrorResponse": {
+                "title": "Error Response",
+                "description": "Standard error response",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Error message"
+                    },
+                    "errors": {
+                        "type": "object",
+                        "example": {
+                            "field": [
+                                "Validation error message"
+                            ]
+                        },
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "SuccessResponse": {
+                "title": "Success Response",
+                "description": "Standard success response",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Operation successful"
+                    },
+                    "data": {
+                        "type": "object",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            }
+        },
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "description": "Enter your Bearer token in the format: Bearer {token}",
+                "bearerFormat": "JWT",
+                "scheme": "bearer"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Authentication",
+            "description": "Authentication endpoints - login, logout, profile"
+        }
+    ]
+}

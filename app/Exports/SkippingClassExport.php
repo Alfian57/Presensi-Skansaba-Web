@@ -2,45 +2,120 @@
 
 namespace App\Exports;
 
-use App\Models\Attendance;
-use App\Models\Grade;
-use App\Models\SkippingClass;
-use App\Models\Student;
+use App\Models\ClassAbsence;
+use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithColumnWidths;
 use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\WithTitle;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class SkippingClassExport implements FromCollection, WithHeadings
+class SkippingClassExport implements FromCollection, WithColumnWidths, WithHeadings, WithMapping, WithStyles, WithTitle
 {
-    protected $grade;
+    protected $classroomSlug;
 
     protected $date;
 
-    public function __construct($grade, $date)
+    public function __construct($classroomSlug = null, $date = null)
     {
-        $this->grade = $grade;
+        $this->classroomSlug = $classroomSlug;
         $this->date = $date;
     }
 
     /**
-     * @return \Illuminate\Support\Collection
+     * @return Collection
      */
     public function collection()
     {
-        $gradesId = Grade::where('slug', $this->grade)->pluck('id');
-        $studentsId = Student::whereIn('grade_id', $gradesId)->pluck('id');
-        $attendancesStudentsId = Attendance::whereIn('student_id', $studentsId)
-            ->where('present_date', $this->date)
-            ->pluck('student_id');
+        $query = ClassAbsence::with(['student.user', 'student.classroom', 'schedule.subject', 'schedule.teacher.user'])
+            ->orderBy('date', 'DESC');
 
-        return SkippingClass::whereIn('student_id', $attendancesStudentsId)
-            ->join('subjects', 'skipping_classes.subject_id', '=', 'subjects.id')
-            ->join('students', 'skipping_classes.student_id', '=', 'students.id')
-            ->select('students.name as namaSiswa', 'students.nisn', 'subjects.name as namaPelajaran')
-            ->get();
+        if ($this->classroomSlug) {
+            $query->whereHas('student.classroom', function ($q) {
+                $q->where('slug', $this->classroomSlug);
+            });
+        }
+
+        if ($this->date) {
+            $query->whereDate('date', $this->date);
+        }
+
+        return $query->get();
+    }
+
+    public function map($classAbsence): array
+    {
+        return [
+            $classAbsence->date->format('d/m/Y'),
+            $classAbsence->student->user->name ?? '-',
+            $classAbsence->student->nisn ?? '-',
+            $classAbsence->student->classroom->name ?? '-',
+            $classAbsence->schedule->subject->name ?? '-',
+            $classAbsence->schedule->teacher->user->name ?? '-',
+            $classAbsence->reason ?? '-',
+        ];
     }
 
     public function headings(): array
     {
-        return ['Nama', 'NISN', 'Mata Pelajaran'];
+        return [
+            'Tanggal',
+            'Nama Siswa',
+            'NISN',
+            'Kelas',
+            'Mata Pelajaran',
+            'Guru Pengajar',
+            'Alasan',
+        ];
+    }
+
+    public function styles(Worksheet $sheet)
+    {
+        return [
+            1 => [
+                'font' => ['bold' => true, 'size' => 12],
+                'fill' => [
+                    'fillType' => Fill::FILL_SOLID,
+                    'startColor' => ['rgb' => '4472C4'],
+                ],
+                'alignment' => [
+                    'horizontal' => Alignment::HORIZONTAL_CENTER,
+                    'vertical' => Alignment::VERTICAL_CENTER,
+                ],
+                'borders' => [
+                    'allBorders' => [
+                        'borderStyle' => Border::BORDER_THIN,
+                    ],
+                ],
+            ],
+        ];
+    }
+
+    public function columnWidths(): array
+    {
+        return [
+            'A' => 12,
+            'B' => 30,
+            'C' => 15,
+            'D' => 15,
+            'E' => 25,
+            'F' => 25,
+            'G' => 40,
+        ];
+    }
+
+    public function title(): string
+    {
+        $title = 'Bolos Pelajaran';
+        if ($this->date) {
+            $title .= ' '.date('d-m-Y', strtotime($this->date));
+        }
+
+        return $title;
     }
 }

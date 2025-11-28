@@ -3,194 +3,157 @@
 namespace App\Http\Controllers;
 
 use App\Exports\TeacherExport;
-use App\Helper;
-use App\Http\Requests\StoreTeacherRequest;
-use App\Http\Requests\UpdateTeacherRequest;
-use App\Models\HomeroomTeacher;
-use App\Models\Schedule;
+use App\Http\Requests\Teacher\StoreTeacherRequest;
+use App\Http\Requests\Teacher\UpdateTeacherRequest;
 use App\Models\Teacher;
-use Illuminate\Support\Facades\Storage;
+use App\Services\TeacherService;
+use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
+use RealRashid\SweetAlert\Facades\Alert;
 
 class TeacherController extends Controller
 {
+    public function __construct(
+        private TeacherService $teacherService
+    ) {}
+
     /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
+     * Display a listing of teachers.
      */
-    public function index()
+    public function index(Request $request)
     {
-        Helper::addHistory('/admin/teachers', 'Guru');
+        $query = Teacher::with(['user']);
 
-        $teachers = Teacher::latest();
-
-        if (request('nip')) {
-            $teachers->where('nip', request('nip'));
+        // Search by employee number or name
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('employee_number', 'like', "%{$search}%")
+                    ->orWhereHas('user', function ($q2) use ($search) {
+                        $q2->where('name', 'like', "%{$search}%");
+                    });
+            });
         }
 
-        $data = [
-            'title' => 'Semua Guru',
-            'teachers' => $teachers->get(),
-        ];
+        $teachers = $query->latest()->paginate(20);
 
-        return view('teacher.index', $data);
+        return view('users.teachers.index', compact('teachers'));
     }
 
     /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
+     * Show the form for creating a new teacher.
      */
     public function create()
     {
-        Helper::addHistory('/admin/teachers/create', 'Tambah Guru');
-
-        $data = [
-            'title' => 'Tambah Guru',
-        ];
-
-        return view('teacher.create', $data);
+        return view('users.teachers.create');
     }
 
     /**
-     * Store a newly created resource in storage.
-     *
-     * @return \Illuminate\Http\Response
+     * Store a newly created teacher.
      */
     public function store(StoreTeacherRequest $request)
     {
-        $validatedData = $request->validate([
-            'nip' => 'required|digits:18|unique:teachers',
-            'name' => 'required|max:255',
-            'email' => 'required|email|unique:teachers',
-            // 'password' => 'required|min:8',
-            'profile_pic' => 'image|file|max:10000',
-        ]);
-        $validatedData['password'] = '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi';
-        if ($request->profile_pic) {
-            $validatedData['profile_pic'] = $request->file('profile_pic')->store('teacher_profile_pic', 'public');
+        try {
+            $teacher = $this->teacherService->create($request->validated());
+
+            Alert::success('Berhasil', "Guru {$teacher->user->name} berhasil ditambahkan.");
+
+            return redirect()->route('dashboard.teachers.index');
+        } catch (\Exception $e) {
+            Alert::error('Gagal', 'Terjadi kesalahan: '.$e->getMessage());
+
+            return back()->withInput();
         }
-
-        Teacher::create($validatedData);
-
-        return redirect('/admin/teachers')->with('success', 'Guru Baru Berhasil Ditambahkan');
     }
 
     /**
-     * Display the specified resource.
-     *
-     * @return \Illuminate\Http\Response
+     * Display the specified teacher.
      */
     public function show(Teacher $teacher)
     {
-        Helper::addHistory('/admin/teachers/'.$teacher->nip, 'Detail Guru');
+        $teacher->load(['user', 'schedules.classroom', 'schedules.subject']);
 
-        $data = [
-            'title' => 'Guru '.$teacher->name,
-            'teacher' => $teacher,
-        ];
-
-        return view('teacher.show', $data);
+        return view('users.teachers.show', compact('teacher'));
     }
 
     /**
-     * Show the form for editing the specified resource.
-     *
-     * @return \Illuminate\Http\Response
+     * Show the form for editing the specified teacher.
      */
     public function edit(Teacher $teacher)
     {
-        Helper::addHistory('/admin/teachers/'.$teacher->nip.'/edit', 'Ubah Guru');
+        $teacher->load(['user']);
 
-        $data = [
-            'title' => 'Edit Data Guru',
-            'teacher' => $teacher,
-        ];
-
-        return view('teacher.edit', $data);
+        return view('users.teachers.edit', compact('teacher'));
     }
 
     /**
-     * Update the specified resource in storage.
-     *
-     * @return \Illuminate\Http\Response
+     * Update the specified teacher.
      */
     public function update(UpdateTeacherRequest $request, Teacher $teacher)
     {
-        $validatedData = $request->validate([
-            'nip' => 'required|digits:18',
-            'name' => 'required|max:255',
-            'email' => 'required|email',
-            'profile_pic' => 'image|file|max:10000',
-        ]);
+        try {
+            $teacher = $this->teacherService->update($teacher, $request->validated());
 
-        $validatedData['password'] = $request->password;
+            Alert::success('Berhasil', "Data guru {$teacher->user->name} berhasil diperbarui.");
 
-        if ($request->old_nip !== $request->nip) {
-            $validatedData['nip'] = $request->validate([
-                'nip' => 'unique:teachers',
-            ]);
-            $validatedData['nip'] = $request->nip;
+            return redirect()->route('dashboard.teachers.index');
+        } catch (\Exception $e) {
+            Alert::error('Gagal', 'Terjadi kesalahan: '.$e->getMessage());
+
+            return back()->withInput();
         }
-
-        if ($request->old_email !== $request->email) {
-            $validatedData['email'] = $request->validate([
-                'email' => 'unique:teachers',
-            ]);
-            $validatedData['email'] = $request->email;
-        }
-
-        if ($request->deleteImage == 'true') {
-            Storage::delete($request->old_profile_pic);
-            $validatedData['profile_pic'] = null;
-        } else {
-            if ($request->profile_pic !== $request->old_profile_pic) {
-                if ($request->profile_pic) {
-                    $validatedData['profile_pic'] = $request->file('profile_pic')->store('teacher_profile_pic', 'public');
-                }
-                if ($request->old_profile_pic) {
-                    Storage::delete($request->old_profile_pic);
-                }
-            } else {
-                $validatedData['profile_pic'] = $request->old_profile_pic;
-            }
-        }
-
-        Teacher::where('id', $teacher->id)->update($validatedData);
-
-        return redirect('/admin/teachers')->with('success', 'Data Guru Berhasil Diperbarui');
     }
 
     /**
-     * Remove the specified resource from storage.
-     *
-     * @return \Illuminate\Http\Response
+     * Remove the specified teacher.
      */
     public function destroy(Teacher $teacher)
     {
-        if ($teacher->profile_pic) {
-            Storage::delete($teacher->profile_pic);
+        try {
+            // Check if teacher has schedules
+            if ($teacher->schedules()->count() > 0) {
+                Alert::warning('Gagal', 'Guru tidak dapat dihapus karena masih memiliki jadwal mengajar.');
+
+                return back();
+            }
+
+            $name = $teacher->user->name;
+            $this->teacherService->delete($teacher);
+
+            Alert::success('Berhasil', "Guru {$name} berhasil dihapus.");
+
+            return redirect()->route('dashboard.teachers.index');
+        } catch (\Exception $e) {
+            Alert::error('Gagal', 'Terjadi kesalahan: '.$e->getMessage());
+
+            return back();
         }
-
-        $homeroomTeachers = HomeroomTeacher::where('teacher_id', $teacher->id)->count();
-        $schedules = Schedule::where('teacher_id', $teacher->id)->count();
-
-        if ($homeroomTeachers > 0) {
-            return redirect('/admin/grades')->with('sAError', 'Guru Ini Digunakan Oleh '.$homeroomTeachers.' Data Wali Kelas. Silahkan Edit Data Wali Kelas Terlebih Dahulu');
-        }
-
-        if ($schedules > 0) {
-            return redirect('/admin/grades')->with('sAError', 'Guru Ini Digunakan Oleh '.$schedules.' Jadwal Mengajar. Silahkan Edit Data Jadwal Mengajar Terlebih Dahulu');
-        }
-
-        Teacher::destroy($teacher->id);
-
-        return redirect('/admin/teachers')->with('success', 'Data Guru '.$teacher->name.' Berhasil Dihapus');
     }
 
-    public function exportExcel()
+    /**
+     * Reset teacher password.
+     */
+    public function resetPassword(Teacher $teacher)
     {
-        return Excel::download(new TeacherExport, 'guru.xlsx');
+        try {
+            $newPassword = 'password'; // Default password
+            $this->teacherService->resetPassword($teacher, $newPassword);
+
+            Alert::success('Berhasil', "Password guru {$teacher->user->name} berhasil direset ke: {$newPassword}");
+
+            return back();
+        } catch (\Exception $e) {
+            Alert::error('Gagal', 'Terjadi kesalahan: '.$e->getMessage());
+
+            return back();
+        }
+    }
+
+    /**
+     * Export teachers to Excel.
+     */
+    public function export()
+    {
+        return Excel::download(new TeacherExport(), 'teachers-'.date('Y-m-d').'.xlsx');
     }
 }

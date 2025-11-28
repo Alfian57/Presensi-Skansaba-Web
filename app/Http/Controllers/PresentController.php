@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Attendance;
-use App\Models\Grade;
-use App\Models\OtherData;
+use App\Models\AttendanceConfig;
+use App\Models\Classroom;
 use App\Models\Student;
 
 class PresentController extends Controller
@@ -15,7 +15,7 @@ class PresentController extends Controller
             ->where('desc', '!=', 'alpha');
 
         if (request('grade')) {
-            $grade = Grade::where('slug', request('grade'))->first();
+            $grade = Classroom::where('slug', request('grade'))->first();
 
             $students = Student::where('grade_id', $grade->id)->pluck('id');
 
@@ -24,11 +24,11 @@ class PresentController extends Controller
 
         $data = [
             'attendances' => $attendances->get(),
-            'qr' => OtherData::where('name', 'QR Absensi Masuk')->first(),
-            'grades' => Grade::latest()->get(),
+            'qr' => AttendanceConfig::where('name', 'QR Absensi Masuk')->first(),
+            'grades' => Classroom::latest()->get(),
         ];
 
-        return view('present.index', $data);
+        return view('config.qr-display', $data);
     }
 
     public function returnHome()
@@ -37,7 +37,7 @@ class PresentController extends Controller
             ->where('return_time', '!=', null);
 
         if (request('grade')) {
-            $grade = Grade::where('slug', request('grade'))->first();
+            $grade = Classroom::where('slug', request('grade'))->first();
 
             $students = Student::where('grade_id', $grade->id)->pluck('id');
 
@@ -46,11 +46,11 @@ class PresentController extends Controller
 
         $data = [
             'attendances' => $attendances->get(),
-            'qr' => OtherData::where('name', 'QR Absensi Pulang')->first(),
-            'grades' => Grade::latest()->get(),
+            'qr' => AttendanceConfig::where('name', 'QR Absensi Pulang')->first(),
+            'grades' => Classroom::latest()->get(),
         ];
 
-        return view('present.index', $data);
+        return view('config.qr-display', $data);
     }
 
     // public function store(Request $request)

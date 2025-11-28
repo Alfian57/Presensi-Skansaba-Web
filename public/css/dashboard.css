@@ -96,10 +96,26 @@ height: max-content;
 	color:#fff;
 }
 
-.qr-icon {
-	width: 20px;
+/* QR Code Trigger */
+.qr-trigger {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 40px;
+	height: 40px;
+	border-radius: 8px;
+	background-color: rgba(255, 255, 255, 0.1);
+	color: white;
+	transition: all 0.2s ease;
+	text-decoration: none;
 }
 
-.qr-icon:hover {
-	cursor: pointer;
+.qr-trigger:hover {
+	background-color: rgba(255, 255, 255, 0.2);
+	color: white;
+	transform: scale(1.05);
+}
+
+.qr-trigger i {
+	font-size: 20px;
 }

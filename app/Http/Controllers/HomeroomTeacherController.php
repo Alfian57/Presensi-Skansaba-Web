@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Helper;
 use App\Http\Requests\StoreHomeroomTeacherRequest;
 use App\Http\Requests\UpdateHomeroomTeacherRequest;
-use App\Models\Grade;
-use App\Models\HomeroomTeacher;
+use App\Models\Classroom;
+use App\Models\Homeroom;
 use App\Models\Teacher;
 
 class HomeroomTeacherController extends Controller
@@ -14,37 +14,37 @@ class HomeroomTeacherController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Contracts\View\View
      */
     public function index()
     {
         Helper::addHistory('/admin/homeroom-teachers', 'Wali Kelas');
 
-        $homeroomTeachers = HomeroomTeacher::latest()->with('teacher', 'grade');
+        $homeroomTeachers = Homeroom::latest()->with('teacher', 'grade');
 
         $data = [
             'title' => 'Semua Wali Kelas',
             'homeroomTeachers' => $homeroomTeachers->get(),
         ];
 
-        return view('homeroomTeacher.index', $data);
+        return view('master-data.homerooms.index', $data);
     }
 
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Contracts\View\View
      */
     public function create()
     {
         Helper::addHistory('/admin/homeroom-teachers/create', 'Tambah Wali Kelas');
 
-        $homeroomTeachers = HomeroomTeacher::pluck('teacher_id');
+        $homeroomTeachers = Homeroom::pluck('teacher_id');
         if ($homeroomTeachers->isEmpty()) {
             $homeroomTeachers = [0];
         }
 
-        $gradesForShow = HomeroomTeacher::pluck('grade_id');
+        $gradesForShow = Homeroom::pluck('grade_id');
         if ($gradesForShow->isEmpty()) {
             $gradesForShow = [0];
         }
@@ -52,16 +52,16 @@ class HomeroomTeacherController extends Controller
         $data = [
             'title' => 'Tambah Wali Kelas',
             'teachers' => Teacher::latest()->whereNotIn('id', $homeroomTeachers)->get(),
-            'grades' => Grade::latest()->whereNotIn('id', $gradesForShow)->get(),
+            'grades' => Classroom::latest()->whereNotIn('id', $gradesForShow)->get(),
         ];
 
-        return view('homeroomTeacher.create', $data);
+        return view('master-data.homerooms.create', $data);
     }
 
     /**
      * Store a newly created resource in storage.
      *
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function store(StoreHomeroomTeacherRequest $request)
     {
@@ -70,7 +70,7 @@ class HomeroomTeacherController extends Controller
             'grade_id' => 'required',
         ]);
 
-        HomeroomTeacher::create($validatedData);
+        Homeroom::create($validatedData);
 
         return redirect('/admin/homeroom-teachers')->with('success', 'Data Wali Kelas Berhasil Ditambahkan');
     }
@@ -78,25 +78,28 @@ class HomeroomTeacherController extends Controller
     /**
      * Display the specified resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return void
      */
-    public function show(HomeroomTeacher $homeroomTeacher) {}
+    public function show(Homeroom $homeroomTeacher)
+    {
+        abort(404);
+    }
 
     /**
      * Show the form for editing the specified resource.
      *
      * @return \Illuminate\Http\Response
      */
-    public function edit(HomeroomTeacher $homeroomTeacher)
+    public function edit(Homeroom $homeroomTeacher)
     {
         Helper::addHistory('/admin/homeroom-teachers/'.$homeroomTeacher->id.'/edit', 'Ubah Wali Kelas');
 
-        $homeroomTeachers = HomeroomTeacher::pluck('teacher_id');
+        $homeroomTeachers = Homeroom::pluck('teacher_id');
         if ($homeroomTeachers->isEmpty()) {
             $homeroomTeachers = [0];
         }
 
-        $gradesForShow = HomeroomTeacher::pluck('grade_id');
+        $gradesForShow = Homeroom::pluck('grade_id');
         if ($gradesForShow->isEmpty()) {
             $gradesForShow = [0];
         }
@@ -105,10 +108,10 @@ class HomeroomTeacherController extends Controller
             'title' => 'Tambah Wali Kelas',
             'homeroomTeacher' => $homeroomTeacher,
             'teachers' => Teacher::latest()->whereNotIn('id', $homeroomTeachers)->get(),
-            'grades' => Grade::latest()->whereNotIn('id', $gradesForShow)->get(),
+            'grades' => Classroom::latest()->whereNotIn('id', $gradesForShow)->get(),
         ];
 
-        return view('homeroomTeacher.edit', $data);
+        return view('master-data.homerooms.edit', $data);
     }
 
     /**
@@ -116,14 +119,14 @@ class HomeroomTeacherController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function update(UpdateHomeroomTeacherRequest $request, HomeroomTeacher $homeroomTeacher)
+    public function update(UpdateHomeroomTeacherRequest $request, Homeroom $homeroomTeacher)
     {
         $validatedData = $request->validate([
             'teacher_id' => 'required',
             'grade_id' => 'required',
         ]);
 
-        HomeroomTeacher::where('id', $homeroomTeacher->id)->update($validatedData);
+        Homeroom::where('id', $homeroomTeacher->id)->update($validatedData);
 
         return redirect('/admin/homeroom-teachers')->with('success', 'Data Wali Kelas Berhasil Diperbarui');
     }
@@ -133,9 +136,9 @@ class HomeroomTeacherController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function destroy(HomeroomTeacher $homeroomTeacher)
+    public function destroy(Homeroom $homeroomTeacher)
     {
-        HomeroomTeacher::destroy($homeroomTeacher->id);
+        Homeroom::destroy($homeroomTeacher->id);
 
         return redirect('/admin/homeroom-teachers')->with('success', 'Data Wali Kelas '.$homeroomTeacher->teacher->name.' Berhasil Dihapus');
     }

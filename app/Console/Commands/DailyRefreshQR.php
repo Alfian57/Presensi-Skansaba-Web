@@ -2,9 +2,9 @@
 
 namespace App\Console\Commands;
 
-use App\Models\OtherData;
+use App\Services\QRCodeService;
 use Illuminate\Console\Command;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class DailyRefreshQR extends Command
 {
@@ -20,21 +20,41 @@ class DailyRefreshQR extends Command
      *
      * @var string
      */
-    protected $description = 'Refresh QR For Attendance';
+    protected $description = 'Refresh daily QR codes for attendance check-in and check-out';
 
     /**
      * Execute the console command.
      *
      * @return int
      */
-    public function handle()
+    public function handle(QRCodeService $qrCodeService)
     {
-        OtherData::where('name', 'QR Absensi Masuk')->update([
-            'value' => Str::random(20),
-        ]);
+        try {
+            $this->info('Refreshing QR codes...');
 
-        OtherData::where('name', 'QR Absensi Pulang')->update([
-            'value' => Str::random(20),
-        ]);
+            // Refresh both QR codes
+            $codes = $qrCodeService->refreshQRCodes();
+            $this->line("Check-in QR: {$codes['check_in']}");
+            $this->line("Check-out QR: {$codes['check_out']}");
+
+            $this->info('QR codes refreshed successfully!');
+
+            Log::info('QR codes refreshed', [
+                'check_in' => $codes['check_in'],
+                'check_out' => $codes['check_out'],
+                'timestamp' => now()->toISOString(),
+            ]);
+
+            return Command::SUCCESS;
+        } catch (\Exception $e) {
+            $this->error('Failed to refresh QR codes: '.$e->getMessage());
+
+            Log::error('QR refresh failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return Command::FAILURE;
+        }
     }
 }

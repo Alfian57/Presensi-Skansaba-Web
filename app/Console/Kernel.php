@@ -2,7 +2,6 @@
 
 namespace App\Console;
 
-use App\Helper;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
@@ -15,8 +14,35 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        $schedule->command('qr:refresh')->daily()->timezone('Asia/Jakarta');
-        $schedule->command('attendance:create')->daily()->timezone('Asia/Jakarta')->days(Helper::getHariMasukForScheduling());
+        // Refresh QR codes daily at midnight
+        $schedule->command('qr:refresh')
+            ->dailyAt('00:00')
+            ->timezone('Asia/Jakarta')
+            ->onSuccess(function () {
+                \Log::info('QR codes refreshed successfully via scheduler');
+            })
+            ->onFailure(function () {
+                \Log::error('Failed to refresh QR codes via scheduler');
+            });
+
+        // Create daily attendance records at 1 AM on working days
+        $schedule->command('attendance:create')
+            ->dailyAt('01:00')
+            ->timezone('Asia/Jakarta')
+            ->weekdays() // Monday to Friday
+            ->when(function () {
+                // Skip if today is a holiday
+                return ! \App\Models\Holiday::whereDate('date', today())->exists();
+            })
+            ->onSuccess(function () {
+                \Log::info('Daily attendance created successfully via scheduler');
+            })
+            ->onFailure(function () {
+                \Log::error('Failed to create daily attendance via scheduler');
+            });
+
+        // Backup database weekly (optional - comment out if not needed)
+        // $schedule->command('backup:run')->weekly()->sundays()->at('02:00');
     }
 
     /**

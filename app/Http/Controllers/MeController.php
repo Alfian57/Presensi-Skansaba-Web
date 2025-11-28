@@ -30,7 +30,7 @@ class MeController extends Controller
             'user' => $user,
         ];
 
-        return view('login.changePass', $data);
+        return view('auth.change-password', $data);
     }
 
     public function updatePassword(Request $request)
@@ -77,46 +77,37 @@ class MeController extends Controller
             'user' => $user,
         ];
 
-        return view('login.changePic', $data);
+        return view('auth.change-photo', $data);
     }
 
     public function updatePic(Request $request)
     {
         $validatedData = $request->validate([
-            'profile_pic' => 'image|file|max:10000',
+            'profile_picture' => 'image|file|max:10000',
         ]);
 
         if ($request->deleteImage == 'true') {
-            Storage::delete($request->old_profile_pic);
-            $validatedData['profile_pic'] = null;
+            Storage::delete($request->old_profile_picture);
+            $validatedData['profile_picture'] = null;
         } else {
-            if ($request->profile_pic !== $request->old_profile_pic) {
-                if ($request->profile_pic) {
-                    if (Auth::guard('user')) {
-                        $validatedData['profile_pic'] = $request->file('profile_pic')->store('user_profile_pic', 'public');
-                    } else {
-                        $validatedData['profile_pic'] = $request->file('profile_pic')->store('teacher_profile_pic', 'public');
-                    }
+            if ($request->profile_picture !== $request->old_profile_picture) {
+                if ($request->profile_picture) {
+                    $validatedData['profile_picture'] = $request->file('profile_picture')->store('profile_pictures', 'public');
                 }
-                if ($request->old_profile_pic) {
-                    Storage::delete($request->old_profile_pic);
+                if ($request->old_profile_picture) {
+                    Storage::delete($request->old_profile_picture);
                 }
             } else {
-                $validatedData['profile_pic'] = $request->profile_pic;
+                $validatedData['profile_picture'] = $request->profile_picture;
             }
         }
 
-        $profilePic = $validatedData['profile_pic'];
+        $profilePic = $validatedData['profile_picture'];
 
-        if (Auth::guard('user')) {
-            User::where('id', Auth::guard('user')->user()->id)->update([
-                'profile_pic' => $profilePic,
-            ]);
-        } else {
-            Teacher::where('id', Auth::guard('teacher')->user()->id)->update([
-                'profile_pic' => $profilePic,
-            ]);
-        }
+        // Update user profile picture
+        User::where('id', Auth::user()->id)->update([
+            'profile_picture' => $profilePic,
+        ]);
 
         return redirect('/admin/home')->with('success', 'Profile User Berhasil Diperbarui');
     }

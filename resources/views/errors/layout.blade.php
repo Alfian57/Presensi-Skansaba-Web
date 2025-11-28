@@ -2,7 +2,7 @@
 <html lang="en">
 
 <head>
-    <title>Absensi Siswa | Error</title>
+    <title>Presensi Siswa | Error</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
@@ -28,7 +28,7 @@
                                 <h6>@yield('message1')</h6>
                                 <p>@yield('message2')</p>
                                 <a href="/" class="btn btn-danger btn-sm mb-3 px-3">Kembali Ke Halaman
-                                    Absensi</a>
+                                    Presensi</a>
                             </div>
                         </div>
                     </div>
@@ -52,7 +52,7 @@
                         <h1 class="m-0">@yield('code')</h1>
                         <h6>@yield('message1')</h6>
                         <p>@yield('message2')</p>
-                        <a href="/present" class="btn btn-danger btn-sm">Kembali Ke Halaman Absensi</a>
+                        <a href="/present" class="btn btn-danger btn-sm">Kembali Ke Halaman Presensi</a>
                     </div>
                 </div>
             </div>
